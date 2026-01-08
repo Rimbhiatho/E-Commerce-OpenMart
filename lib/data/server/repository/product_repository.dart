@@ -3,7 +3,6 @@ import 'package:openmart/data/server/service/product_api_service.dart';
 import 'package:openmart/data/server/model/product_model.dart';
 import 'package:sqflite/sqflite.dart';
 
-
 class ProductRepository {
   final ProductApiService apiService;
   final DatabaseHelper dbHelper;
