@@ -59,6 +59,9 @@ export interface CreateOrderDTO {
   shippingAddress: string;
   paymentMethod: string;
   notes?: string;
+  totalAmount?: number;
+  status?: OrderStatus;
+  paymentStatus?: PaymentStatus;
 }
 
 export interface UpdateOrderStatusDTO {
