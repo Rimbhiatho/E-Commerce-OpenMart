@@ -1,4 +1,4 @@
-import { initializeDatabase } from './database';
+import { initializeDatabase } from './database.js';
 
 const init = async (): Promise<void> => {
   try {
