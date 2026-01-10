@@ -1,6 +1,6 @@
 import { UserRepository } from '../repositories/UserRepository';
 import { CreateUserDTO, LoginDTO, AuthResponse, User } from '../entities/User';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 
 export class AuthUseCase {
@@ -67,6 +67,7 @@ export class AuthUseCase {
     return this.userRepository.delete(userId);
   }
 
+  // --- BAGIAN YANG DIPERBAIKI ADA DI BAWAH INI ---
   private generateToken(user: User): string {
     return jwt.sign(
       {
@@ -74,8 +75,10 @@ export class AuthUseCase {
         email: user.email,
         role: user.role
       },
-      this.jwtSecret,
-      { expiresIn: this.jwtExpiresIn }
+      this.jwtSecret, // 'as any' dihapus karena string valid untuk Secret
+      { 
+        expiresIn: this.jwtExpiresIn 
+      } as jwt.SignOptions // <--- PERBAIKAN UTAMA: Casting ke tipe SignOptions
     );
   }
 
@@ -83,4 +86,3 @@ export class AuthUseCase {
     return jwt.verify(token, this.jwtSecret) as { id: string; email: string; role: string };
   }
 }
-

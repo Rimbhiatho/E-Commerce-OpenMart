@@ -1,17 +1,19 @@
-import { User, CreateUserDTO, UserResponse } from '../entities/User';
-import { UserRepository } from '../domain/repositories/UserRepository';
-import { getDatabase } from './database';
+import { User, CreateUserDTO, UserResponse } from '../../domain/entities/User';
+import { UserRepository } from '../../domain/repositories/UserRepository';
+import { getDatabase } from '../database/database';
+import { Database } from 'sqlite';
 import { v4 as uuidv4 } from 'uuid';
 
 export class UserRepositoryImpl implements UserRepository {
-  private db = getDatabase();
+  private db: Promise<Database> = getDatabase();
 
   async findById(id: string): Promise<User | null> {
+    const db = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.get(
+      db.get(
         'SELECT * FROM users WHERE id = ?',
         [id],
-        (err, row: any) => {
+        (err: any, row: any) => {
           if (err) reject(err);
           else {
             if (row) {
@@ -26,11 +28,12 @@ export class UserRepositoryImpl implements UserRepository {
   }
 
   async findByEmail(email: string): Promise<User | null> {
+    const db = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.get(
+      db.get(
         'SELECT * FROM users WHERE email = ?',
         [email],
-        (err, row: any) => {
+        (err: any, row: any) => {
           if (err) reject(err);
           else {
             if (row) {
@@ -45,10 +48,10 @@ export class UserRepositoryImpl implements UserRepository {
   }
 
   async findAll(): Promise<User[]> {
-    return new Promise((resolve, reject) => {
-      this.db.all(
+    return new Promise(async (resolve, reject) => {
+      (await this.db).all(
         'SELECT * FROM users ORDER BY createdAt DESC',
-        (err, rows: any[]) => {
+        (err: any, rows: any[]) => {
           if (err) reject(err);
           else {
             resolve(rows.map(row => this.mapRowToUser(row)));
@@ -59,15 +62,16 @@ export class UserRepositoryImpl implements UserRepository {
   }
 
   async create(dto: CreateUserDTO): Promise<User> {
+    const db = await this.db;
     const id = uuidv4();
     const now = new Date().toISOString();
-    
+
     return new Promise((resolve, reject) => {
-      this.db.run(
+      db.run(
         `INSERT INTO users (id, email, password, name, role, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [id, dto.email, dto.password, dto.name, dto.role || 'customer', now, now],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve({
@@ -105,11 +109,11 @@ export class UserRepositoryImpl implements UserRepository {
     values.push(now);
     values.push(id);
 
-    return new Promise((resolve, reject) => {
-      this.db.run(
+    return new Promise(async (resolve, reject) => {
+      (await this.db).run(
         `UPDATE users SET ${updates.join(', ')} WHERE id = ?`,
         values,
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(this.findById(id) as Promise<User>);
@@ -120,11 +124,11 @@ export class UserRepositoryImpl implements UserRepository {
   }
 
   async delete(id: string): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      this.db.run(
+    return new Promise(async (resolve, reject) => {
+      (await this.db).run(
         'DELETE FROM users WHERE id = ?',
         [id],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(true);
