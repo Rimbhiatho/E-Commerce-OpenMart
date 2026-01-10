@@ -1,17 +1,19 @@
-import { Category, CreateCategoryDTO, UpdateCategoryDTO, CategoryResponse } from '../entities/Category';
-import { CategoryRepository } from '../domain/repositories/CategoryRepository';
-import { getDatabase } from './database';
+import { Category, CreateCategoryDTO, UpdateCategoryDTO, CategoryResponse } from '../../domain/entities/Category';
+import { CategoryRepository } from '../../domain/repositories/CategoryRepository';
+import { getDatabase } from '../database/database';
 import { v4 as uuidv4 } from 'uuid';
+import { Database } from 'sqlite';
 
 export class CategoryRepositoryImpl implements CategoryRepository {
-  private db = getDatabase();
+  private db: Promise<Database> = getDatabase();
 
   async findById(id: string): Promise<Category | null> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.get(
+      database.get(
         'SELECT * FROM categories WHERE id = ?',
         [id],
-        (err, row: any) => {
+        (err: any, row: any) => {
           if (err) reject(err);
           else {
             if (row) {
@@ -26,10 +28,11 @@ export class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   async findAll(): Promise<Category[]> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.all(
+      database.all(
         'SELECT * FROM categories ORDER BY name ASC',
-        (err, rows: any[]) => {
+        (err: any, rows: any[]) => {
           if (err) reject(err);
           else {
             resolve(rows.map(row => this.mapRowToCategory(row)));
@@ -40,10 +43,11 @@ export class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   async findActive(): Promise<Category[]> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.all(
+      database.all(
         'SELECT * FROM categories WHERE isActive = 1 ORDER BY name ASC',
-        (err, rows: any[]) => {
+        (err: any, rows: any[]) => {
           if (err) reject(err);
           else {
             resolve(rows.map(row => this.mapRowToCategory(row)));
@@ -54,15 +58,16 @@ export class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   async create(dto: CreateCategoryDTO): Promise<Category> {
+    const database = await this.db;
     const id = uuidv4();
     const now = new Date().toISOString();
     
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         `INSERT INTO categories (id, name, description, imageUrl, isActive, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [id, dto.name, dto.description, dto.imageUrl, 1, now, now],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve({
@@ -81,6 +86,7 @@ export class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   async update(id: string, data: UpdateCategoryDTO): Promise<Category> {
+    const database = await this.db;
     const now = new Date().toISOString();
     const updates: string[] = [];
     const values: any[] = [];
@@ -111,10 +117,10 @@ export class CategoryRepositoryImpl implements CategoryRepository {
     values.push(id);
 
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         `UPDATE categories SET ${updates.join(', ')} WHERE id = ?`,
         values,
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(this.findById(id) as Promise<Category>);
@@ -125,11 +131,12 @@ export class CategoryRepositoryImpl implements CategoryRepository {
   }
 
   async delete(id: string): Promise<boolean> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         'DELETE FROM categories WHERE id = ?',
         [id],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(true);

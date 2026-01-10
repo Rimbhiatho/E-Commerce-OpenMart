@@ -1,20 +1,22 @@
-import { Order, CreateOrderDTO, UpdateOrderStatusDTO, UpdatePaymentStatusDTO, OrderFilter, OrderResponse, OrderStatus, PaymentStatus } from '../entities/Order';
-import { OrderRepository } from '../domain/repositories/OrderRepository';
-import { getDatabase } from './database';
+import { Order, CreateOrderDTO, UpdateOrderStatusDTO, UpdatePaymentStatusDTO, OrderFilter, OrderResponse, OrderStatus, PaymentStatus, OrderItem } from '../../domain/entities/Order';
+import { OrderRepository } from '../../domain/repositories/OrderRepository';
+import { getDatabase } from '../database/database';
 import { v4 as uuidv4 } from 'uuid';
+import { Database } from 'sqlite';
 
 export class OrderRepositoryImpl implements OrderRepository {
-  private db = getDatabase();
+  private db: Promise<Database> = getDatabase();
 
   async findById(id: string): Promise<Order | null> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.get(
+      database.get(
         `SELECT o.*, u.name as userName 
          FROM orders o 
          LEFT JOIN users u ON o.userId = u.id 
          WHERE o.id = ?`,
         [id],
-        (err, row: any) => {
+        (err: any, row: any) => {
           if (err) reject(err);
           else {
             if (row) {
@@ -29,6 +31,7 @@ export class OrderRepositoryImpl implements OrderRepository {
   }
 
   async findAll(filter?: OrderFilter): Promise<Order[]> {
+    const database = await this.db;
     let query = `SELECT o.*, u.name as userName FROM orders o LEFT JOIN users u ON o.userId = u.id WHERE 1=1`;
     const params: any[] = [];
 
@@ -56,7 +59,7 @@ export class OrderRepositoryImpl implements OrderRepository {
     query += ' ORDER BY o.createdAt DESC';
 
     return new Promise((resolve, reject) => {
-      this.db.all(query, params, (err, rows: any[]) => {
+      database.all(query, params, (err: any, rows: any[]) => {
         if (err) reject(err);
         else {
           resolve(rows.map(row => this.mapRowToOrder(row)));
@@ -66,15 +69,16 @@ export class OrderRepositoryImpl implements OrderRepository {
   }
 
   async findByUser(userId: string): Promise<Order[]> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.all(
+      database.all(
         `SELECT o.*, u.name as userName 
          FROM orders o 
          LEFT JOIN users u ON o.userId = u.id 
          WHERE o.userId = ? 
          ORDER BY o.createdAt DESC`,
         [userId],
-        (err, rows: any[]) => {
+        (err: any, rows: any[]) => {
           if (err) reject(err);
           else {
             resolve(rows.map(row => this.mapRowToOrder(row)));
@@ -85,15 +89,16 @@ export class OrderRepositoryImpl implements OrderRepository {
   }
 
   async findByStatus(status: OrderStatus): Promise<Order[]> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.all(
+      database.all(
         `SELECT o.*, u.name as userName 
          FROM orders o 
          LEFT JOIN users u ON o.userId = u.id 
          WHERE o.status = ? 
          ORDER BY o.createdAt DESC`,
         [status],
-        (err, rows: any[]) => {
+        (err: any, rows: any[]) => {
           if (err) reject(err);
           else {
             resolve(rows.map(row => this.mapRowToOrder(row)));
@@ -104,12 +109,23 @@ export class OrderRepositoryImpl implements OrderRepository {
   }
 
   async create(dto: CreateOrderDTO): Promise<Order> {
+    const database = await this.db;
     const id = uuidv4();
     const now = new Date().toISOString();
     const items = JSON.stringify(dto.items);
     
+    // Convert DTO items to OrderItem format
+    const orderItems: OrderItem[] = dto.items.map((item, index) => ({
+      id: `item-${index}`,
+      productId: item.productId,
+      productName: '',
+      quantity: item.quantity,
+      unitPrice: 0,
+      totalPrice: 0
+    }));
+    
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         `INSERT INTO orders (id, userId, items, totalAmount, status, shippingAddress, paymentMethod, paymentStatus, notes, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
@@ -125,13 +141,13 @@ export class OrderRepositoryImpl implements OrderRepository {
           now,
           now
         ],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve({
               id,
               userId: dto.userId,
-              items: dto.items,
+              items: orderItems,
               totalAmount: dto.totalAmount || 0,
               status: dto.status || 'pending',
               shippingAddress: dto.shippingAddress,
@@ -148,13 +164,14 @@ export class OrderRepositoryImpl implements OrderRepository {
   }
 
   async updateStatus(id: string, dto: UpdateOrderStatusDTO): Promise<Order> {
+    const database = await this.db;
     const now = new Date().toISOString();
     
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         'UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?',
         [dto.status, now, id],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(this.findById(id) as Promise<Order>);
@@ -165,13 +182,14 @@ export class OrderRepositoryImpl implements OrderRepository {
   }
 
   async updatePaymentStatus(id: string, dto: UpdatePaymentStatusDTO): Promise<Order> {
+    const database = await this.db;
     const now = new Date().toISOString();
     
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         'UPDATE orders SET paymentStatus = ?, updatedAt = ? WHERE id = ?',
         [dto.paymentStatus, now, id],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(this.findById(id) as Promise<Order>);
@@ -182,11 +200,12 @@ export class OrderRepositoryImpl implements OrderRepository {
   }
 
   async delete(id: string): Promise<boolean> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         'DELETE FROM orders WHERE id = ?',
         [id],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(true);
@@ -196,11 +215,11 @@ export class OrderRepositoryImpl implements OrderRepository {
     });
   }
 
-  toResponse(order: Order): OrderResponse {
+  toResponse(order: Order & { userName?: string }): OrderResponse {
     return {
       id: order.id,
       userId: order.userId,
-      userName: (order as any).userName || '',
+      userName: order.userName || '',
       items: order.items,
       totalAmount: order.totalAmount,
       status: order.status,
@@ -212,10 +231,18 @@ export class OrderRepositoryImpl implements OrderRepository {
     };
   }
 
-  private mapRowToOrder(row: any): Order {
-    let items = [];
+  private mapRowToOrder(row: any): Order & { userName?: string } {
+    let items: OrderItem[] = [];
     try {
-      items = JSON.parse(row.items);
+      const parsedItems = JSON.parse(row.items);
+      items = parsedItems.map((item: any, index: number) => ({
+        id: `item-${index}`,
+        productId: item.productId,
+        productName: '',
+        quantity: item.quantity,
+        unitPrice: 0,
+        totalPrice: 0
+      }));
     } catch (e) {
       items = [];
     }

@@ -1,20 +1,22 @@
-import { Product, CreateProductDTO, UpdateProductDTO, ProductFilter, ProductResponse } from '../entities/Product';
-import { ProductRepository } from '../domain/repositories/ProductRepository';
-import { getDatabase } from './database';
+import { Product, CreateProductDTO, UpdateProductDTO, ProductFilter, ProductResponse } from '../../domain/entities/Product';
+import { ProductRepository } from '../../domain/repositories/ProductRepository';
+import { getDatabase } from '../database/database';
 import { v4 as uuidv4 } from 'uuid';
+import { Database } from 'sqlite';
 
 export class ProductRepositoryImpl implements ProductRepository {
-  private db = getDatabase();
+  private db: Promise<Database> = getDatabase();
 
   async findById(id: string): Promise<Product | null> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.get(
+      database.get(
         `SELECT p.*, c.name as categoryName 
          FROM products p 
          LEFT JOIN categories c ON p.categoryId = c.id 
          WHERE p.id = ?`,
         [id],
-        (err, row: any) => {
+        (err: any, row: any) => {
           if (err) reject(err);
           else {
             if (row) {
@@ -29,6 +31,7 @@ export class ProductRepositoryImpl implements ProductRepository {
   }
 
   async findAll(filter?: ProductFilter): Promise<Product[]> {
+    const database = await this.db;
     let query = `SELECT p.*, c.name as categoryName FROM products p LEFT JOIN categories c ON p.categoryId = c.id WHERE 1=1`;
     const params: any[] = [];
 
@@ -56,7 +59,7 @@ export class ProductRepositoryImpl implements ProductRepository {
     query += ' ORDER BY p.name ASC';
 
     return new Promise((resolve, reject) => {
-      this.db.all(query, params, (err, rows: any[]) => {
+      database.all(query, params, (err: any, rows: any[]) => {
         if (err) reject(err);
         else {
           resolve(rows.map(row => this.mapRowToProduct(row)));
@@ -66,15 +69,16 @@ export class ProductRepositoryImpl implements ProductRepository {
   }
 
   async findByCategory(categoryId: string): Promise<Product[]> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.all(
+      database.all(
         `SELECT p.*, c.name as categoryName 
          FROM products p 
          LEFT JOIN categories c ON p.categoryId = c.id 
          WHERE p.categoryId = ? 
          ORDER BY p.name ASC`,
         [categoryId],
-        (err, rows: any[]) => {
+        (err: any, rows: any[]) => {
           if (err) reject(err);
           else {
             resolve(rows.map(row => this.mapRowToProduct(row)));
@@ -85,15 +89,16 @@ export class ProductRepositoryImpl implements ProductRepository {
   }
 
   async create(dto: CreateProductDTO): Promise<Product> {
+    const database = await this.db;
     const id = uuidv4();
     const now = new Date().toISOString();
     
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         `INSERT INTO products (id, name, description, price, stock, categoryId, imageUrl, isActive, createdAt, updatedAt)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [id, dto.name, dto.description, dto.price, dto.stock, dto.categoryId, dto.imageUrl, 1, now, now],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve({
@@ -115,6 +120,7 @@ export class ProductRepositoryImpl implements ProductRepository {
   }
 
   async update(id: string, data: UpdateProductDTO): Promise<Product> {
+    const database = await this.db;
     const now = new Date().toISOString();
     const updates: string[] = [];
     const values: any[] = [];
@@ -157,10 +163,10 @@ export class ProductRepositoryImpl implements ProductRepository {
     values.push(id);
 
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         `UPDATE products SET ${updates.join(', ')} WHERE id = ?`,
         values,
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(this.findById(id) as Promise<Product>);
@@ -171,11 +177,12 @@ export class ProductRepositoryImpl implements ProductRepository {
   }
 
   async delete(id: string): Promise<boolean> {
+    const database = await this.db;
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         'DELETE FROM products WHERE id = ?',
         [id],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(true);
@@ -186,13 +193,14 @@ export class ProductRepositoryImpl implements ProductRepository {
   }
 
   async updateStock(id: string, quantity: number): Promise<Product> {
+    const database = await this.db;
     const now = new Date().toISOString();
     
     return new Promise((resolve, reject) => {
-      this.db.run(
+      database.run(
         'UPDATE products SET stock = ?, updatedAt = ? WHERE id = ?',
         [quantity, now, id],
-        (err) => {
+        (err: any) => {
           if (err) reject(err);
           else {
             resolve(this.findById(id) as Promise<Product>);
@@ -202,7 +210,7 @@ export class ProductRepositoryImpl implements ProductRepository {
     });
   }
 
-  toResponse(product: Product): ProductResponse {
+  toResponse(product: Product & { categoryName?: string }): ProductResponse {
     return {
       id: product.id,
       name: product.name,
@@ -210,14 +218,14 @@ export class ProductRepositoryImpl implements ProductRepository {
       price: product.price,
       stock: product.stock,
       categoryId: product.categoryId,
-      categoryName: (product as any).categoryName,
+      categoryName: product.categoryName || '',
       imageUrl: product.imageUrl,
       isActive: product.isActive,
       createdAt: product.createdAt
     };
   }
 
-  private mapRowToProduct(row: any): Product {
+  private mapRowToProduct(row: any): Product & { categoryName?: string } {
     return {
       id: row.id,
       name: row.name,
