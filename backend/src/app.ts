@@ -36,9 +36,9 @@ dotenv.config();
 export function createApp(): Application {
   const app = express();
   const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-  const port = process.env.PORT || 3000;
+  // Port diambil di main.ts, tapi bisa didefinisikan default di sini jika perlu
 
-  // Middleware
+  // Middleware Global
   app.use(helmet());
   app.use(cors());
   app.use(morgan('dev'));
@@ -64,6 +64,14 @@ export function createApp(): Application {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  // --- [START] DEBUGGING MIDDLEWARE (CCTV) ---
+  // Kode ini akan mencatat setiap request yang masuk ke terminal
+  app.use((req, res, next) => {
+    console.log(`[DEBUG LOG] Method: ${req.method} | URL: ${req.url}`);
+    next(); // Lanjut ke route berikutnya
+  });
+  // --- [END] DEBUGGING MIDDLEWARE ---
+
   // API routes
   app.use('/api/auth', setupAuthRoutes(authController, jwtSecret));
   app.use('/api/products', setupProductRoutes(productController, jwtSecret));
@@ -71,8 +79,9 @@ export function createApp(): Application {
   app.use('/api/orders', setupOrderRoutes(orderController, jwtSecret));
   app.use('/api/inventory', setupInventoryRoutes(inventoryController, jwtSecret));
 
-  // 404 handler
+  // 404 handler (Jika route tidak ditemukan di atas)
   app.use((req: Request, res: Response) => {
+    console.log(`[DEBUG LOG] Route Not Found: ${req.url}`); // Tambahan log untuk 404
     res.status(404).json({
       success: false,
       message: 'Route not found'

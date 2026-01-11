@@ -49,7 +49,7 @@ export class AuthController {
 
   async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.user?.id;
+      const userId = (req as any).user?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -88,7 +88,7 @@ export class AuthController {
 
   async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const userId = req.params.id || req.user?.id;
+      const userId = req.params.id || (req as any).user?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
