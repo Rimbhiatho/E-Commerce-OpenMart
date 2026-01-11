@@ -29,23 +29,14 @@ export class UserRepositoryImpl implements UserRepository {
 
   async findByEmail(email: string): Promise<User | null> {
     const db = await this.db;
-    return new Promise((resolve, reject) => {
-      db.get(
-        'SELECT * FROM users WHERE email = ?',
-        [email],
-        (err: any, row: any) => {
-          if (err) reject(err);
-          else {
-            if (row) {
-              resolve(this.mapRowToUser(row));
-            } else {
-              resolve(null);
-            }
-          }
-        }
-      );
-    });
+    const row = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    if (row) {
+      return this.mapRowToUser(row);
+    } else {
+      return null;
+    }
   }
+
 
   async findAll(): Promise<User[]> {
     return new Promise(async (resolve, reject) => {

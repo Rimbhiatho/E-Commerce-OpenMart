@@ -2,7 +2,6 @@
   "name": "openmart-pos-backend",
   "version": "1.0.0",
   "description": "OpenMart POS Backend - Mobile Point of Sales System for Lifestyle & Technology Retail",
-  "type": "module",
   "main": "dist/app.js",
   "scripts": {
     "dev": "tsx watch src/main.ts",
