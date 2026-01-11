@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
 import 'dart:async';
 import 'package:openmart/data/server/service/auth_api_service.dart';

@@ -6,7 +6,7 @@ class CartProduct extends StatelessWidget {
   final double productprice;
   final VoidCallback onpress;
 
-  const CartProduct({
+  const CartProduct({super.key, 
     required this.imageurl,
     required this.productname,
     required this.productprice,
