@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:openmart/Customer/homecus.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
@@ -45,7 +46,12 @@ class LoginPage extends StatelessWidget {
                       padding: EdgeInsets.symmetric(vertical: 16),
                       textStyle: TextStyle(fontSize: 18),
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => CustomerHome()),
+                      );
+                    },
                     child: Text('Login', style: TextStyle(color: Colors.white)),
                   ),
                 ),
