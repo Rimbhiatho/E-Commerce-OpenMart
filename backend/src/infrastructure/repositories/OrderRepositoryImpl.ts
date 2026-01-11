@@ -2,36 +2,22 @@ import { Order, CreateOrderDTO, UpdateOrderStatusDTO, UpdatePaymentStatusDTO, Or
 import { OrderRepository } from '../../domain/repositories/OrderRepository';
 import { getDatabase } from '../database/database';
 import { v4 as uuidv4 } from 'uuid';
-import { Database } from 'sqlite';
 
 export class OrderRepositoryImpl implements OrderRepository {
-  private db: Promise<Database> = getDatabase();
-
   async findById(id: string): Promise<Order | null> {
-    const database = await this.db;
-    return new Promise((resolve, reject) => {
-      database.get(
-        `SELECT o.*, u.name as userName 
-         FROM orders o 
-         LEFT JOIN users u ON o.userId = u.id 
-         WHERE o.id = ?`,
-        [id],
-        (err: any, row: any) => {
-          if (err) reject(err);
-          else {
-            if (row) {
-              resolve(this.mapRowToOrder(row));
-            } else {
-              resolve(null);
-            }
-          }
-        }
-      );
-    });
+    const db = await getDatabase();
+    const row = await db.get(
+      `SELECT o.*, u.name as userName 
+       FROM orders o 
+       LEFT JOIN users u ON o.userId = u.id 
+       WHERE o.id = ?`,
+      [id]
+    );
+    return row ? this.mapRowToOrder(row) : null;
   }
 
   async findAll(filter?: OrderFilter): Promise<Order[]> {
-    const database = await this.db;
+    const db = await getDatabase();
     let query = `SELECT o.*, u.name as userName FROM orders o LEFT JOIN users u ON o.userId = u.id WHERE 1=1`;
     const params: any[] = [];
 
@@ -58,58 +44,38 @@ export class OrderRepositoryImpl implements OrderRepository {
 
     query += ' ORDER BY o.createdAt DESC';
 
-    return new Promise((resolve, reject) => {
-      database.all(query, params, (err: any, rows: any[]) => {
-        if (err) reject(err);
-        else {
-          resolve(rows.map(row => this.mapRowToOrder(row)));
-        }
-      });
-    });
+    const rows = await db.all(query, params);
+    return rows.map((row: any) => this.mapRowToOrder(row));
   }
 
   async findByUser(userId: string): Promise<Order[]> {
-    const database = await this.db;
-    return new Promise((resolve, reject) => {
-      database.all(
-        `SELECT o.*, u.name as userName 
-         FROM orders o 
-         LEFT JOIN users u ON o.userId = u.id 
-         WHERE o.userId = ? 
-         ORDER BY o.createdAt DESC`,
-        [userId],
-        (err: any, rows: any[]) => {
-          if (err) reject(err);
-          else {
-            resolve(rows.map(row => this.mapRowToOrder(row)));
-          }
-        }
-      );
-    });
+    const db = await getDatabase();
+    const rows = await db.all(
+      `SELECT o.*, u.name as userName 
+       FROM orders o 
+       LEFT JOIN users u ON o.userId = u.id 
+       WHERE o.userId = ? 
+       ORDER BY o.createdAt DESC`,
+      [userId]
+    );
+    return rows.map((row: any) => this.mapRowToOrder(row));
   }
 
   async findByStatus(status: OrderStatus): Promise<Order[]> {
-    const database = await this.db;
-    return new Promise((resolve, reject) => {
-      database.all(
-        `SELECT o.*, u.name as userName 
-         FROM orders o 
-         LEFT JOIN users u ON o.userId = u.id 
-         WHERE o.status = ? 
-         ORDER BY o.createdAt DESC`,
-        [status],
-        (err: any, rows: any[]) => {
-          if (err) reject(err);
-          else {
-            resolve(rows.map(row => this.mapRowToOrder(row)));
-          }
-        }
-      );
-    });
+    const db = await getDatabase();
+    const rows = await db.all(
+      `SELECT o.*, u.name as userName 
+       FROM orders o 
+       LEFT JOIN users u ON o.userId = u.id 
+       WHERE o.status = ? 
+       ORDER BY o.createdAt DESC`,
+      [status]
+    );
+    return rows.map((row: any) => this.mapRowToOrder(row));
   }
 
   async create(dto: CreateOrderDTO): Promise<Order> {
-    const database = await this.db;
+    const db = await getDatabase();
     const id = uuidv4();
     const now = new Date().toISOString();
     const items = JSON.stringify(dto.items);
@@ -124,95 +90,67 @@ export class OrderRepositoryImpl implements OrderRepository {
       totalPrice: 0
     }));
     
-    return new Promise((resolve, reject) => {
-      database.run(
-        `INSERT INTO orders (id, userId, items, totalAmount, status, shippingAddress, paymentMethod, paymentStatus, notes, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          dto.userId,
-          items,
-          dto.totalAmount || 0,
-          dto.status || 'pending',
-          dto.shippingAddress,
-          dto.paymentMethod,
-          dto.paymentStatus || 'pending',
-          dto.notes || null,
-          now,
-          now
-        ],
-        (err: any) => {
-          if (err) reject(err);
-          else {
-            resolve({
-              id,
-              userId: dto.userId,
-              items: orderItems,
-              totalAmount: dto.totalAmount || 0,
-              status: dto.status || 'pending',
-              shippingAddress: dto.shippingAddress,
-              paymentMethod: dto.paymentMethod,
-              paymentStatus: dto.paymentStatus || 'pending',
-              notes: dto.notes,
-              createdAt: new Date(now),
-              updatedAt: new Date(now)
-            });
-          }
-        }
-      );
-    });
+    await db.run(
+      `INSERT INTO orders (id, userId, items, totalAmount, status, shippingAddress, paymentMethod, paymentStatus, notes, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        dto.userId,
+        items,
+        dto.totalAmount || 0,
+        dto.status || 'pending',
+        dto.shippingAddress,
+        dto.paymentMethod,
+        dto.paymentStatus || 'pending',
+        dto.notes || null,
+        now,
+        now
+      ]
+    );
+
+    return {
+      id,
+      userId: dto.userId,
+      items: orderItems,
+      totalAmount: dto.totalAmount || 0,
+      status: dto.status || 'pending',
+      shippingAddress: dto.shippingAddress,
+      paymentMethod: dto.paymentMethod,
+      paymentStatus: dto.paymentStatus || 'pending',
+      notes: dto.notes,
+      createdAt: new Date(now),
+      updatedAt: new Date(now)
+    };
   }
 
   async updateStatus(id: string, dto: UpdateOrderStatusDTO): Promise<Order> {
-    const database = await this.db;
+    const db = await getDatabase();
     const now = new Date().toISOString();
     
-    return new Promise((resolve, reject) => {
-      database.run(
-        'UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?',
-        [dto.status, now, id],
-        (err: any) => {
-          if (err) reject(err);
-          else {
-            resolve(this.findById(id) as Promise<Order>);
-          }
-        }
-      );
-    });
+    await db.run(
+      'UPDATE orders SET status = ?, updatedAt = ? WHERE id = ?',
+      [dto.status, now, id]
+    );
+
+    return (await this.findById(id)) as Order;
   }
 
   async updatePaymentStatus(id: string, dto: UpdatePaymentStatusDTO): Promise<Order> {
-    const database = await this.db;
+    const db = await getDatabase();
     const now = new Date().toISOString();
     
-    return new Promise((resolve, reject) => {
-      database.run(
-        'UPDATE orders SET paymentStatus = ?, updatedAt = ? WHERE id = ?',
-        [dto.paymentStatus, now, id],
-        (err: any) => {
-          if (err) reject(err);
-          else {
-            resolve(this.findById(id) as Promise<Order>);
-          }
-        }
-      );
-    });
+    await db.run(
+      'UPDATE orders SET paymentStatus = ?, updatedAt = ? WHERE id = ?',
+      [dto.paymentStatus, now, id]
+    );
+
+    return (await this.findById(id)) as Order;
   }
 
   async delete(id: string): Promise<boolean> {
-    const database = await this.db;
-    return new Promise((resolve, reject) => {
-      database.run(
-        'DELETE FROM orders WHERE id = ?',
-        [id],
-        (err: any) => {
-          if (err) reject(err);
-          else {
-            resolve(true);
-          }
-        }
-      );
-    });
+    const db = await getDatabase();
+    await db.run('DELETE FROM orders WHERE id = ?', [id]);
+    return true;
   }
 
   toResponse(order: Order & { userName?: string }): OrderResponse {

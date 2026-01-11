@@ -2,91 +2,50 @@ import { Category, CreateCategoryDTO, UpdateCategoryDTO, CategoryResponse } from
 import { CategoryRepository } from '../../domain/repositories/CategoryRepository';
 import { getDatabase } from '../database/database';
 import { v4 as uuidv4 } from 'uuid';
-import { Database } from 'sqlite';
 
 export class CategoryRepositoryImpl implements CategoryRepository {
-  private db: Promise<Database> = getDatabase();
-
   async findById(id: string): Promise<Category | null> {
-    const database = await this.db;
-    return new Promise((resolve, reject) => {
-      database.get(
-        'SELECT * FROM categories WHERE id = ?',
-        [id],
-        (err: any, row: any) => {
-          if (err) reject(err);
-          else {
-            if (row) {
-              resolve(this.mapRowToCategory(row));
-            } else {
-              resolve(null);
-            }
-          }
-        }
-      );
-    });
+    const db = await getDatabase();
+    const row = await db.get('SELECT * FROM categories WHERE id = ?', [id]);
+    return row ? this.mapRowToCategory(row) : null;
   }
 
   async findAll(): Promise<Category[]> {
-    const database = await this.db;
-    return new Promise((resolve, reject) => {
-      database.all(
-        'SELECT * FROM categories ORDER BY name ASC',
-        (err: any, rows: any[]) => {
-          if (err) reject(err);
-          else {
-            resolve(rows.map(row => this.mapRowToCategory(row)));
-          }
-        }
-      );
-    });
+    const db = await getDatabase();
+    const rows = await db.all('SELECT * FROM categories ORDER BY name ASC');
+    return rows.map((row: any) => this.mapRowToCategory(row));
   }
 
   async findActive(): Promise<Category[]> {
-    const database = await this.db;
-    return new Promise((resolve, reject) => {
-      database.all(
-        'SELECT * FROM categories WHERE isActive = 1 ORDER BY name ASC',
-        (err: any, rows: any[]) => {
-          if (err) reject(err);
-          else {
-            resolve(rows.map(row => this.mapRowToCategory(row)));
-          }
-        }
-      );
-    });
+    const db = await getDatabase();
+    const rows = await db.all('SELECT * FROM categories WHERE isActive = 1 ORDER BY name ASC');
+    return rows.map((row: any) => this.mapRowToCategory(row));
   }
 
   async create(dto: CreateCategoryDTO): Promise<Category> {
-    const database = await this.db;
+    const db = await getDatabase();
     const id = uuidv4();
     const now = new Date().toISOString();
     
-    return new Promise((resolve, reject) => {
-      database.run(
-        `INSERT INTO categories (id, name, description, imageUrl, isActive, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id, dto.name, dto.description, dto.imageUrl, 1, now, now],
-        (err: any) => {
-          if (err) reject(err);
-          else {
-            resolve({
-              id,
-              name: dto.name,
-              description: dto.description,
-              imageUrl: dto.imageUrl,
-              isActive: true,
-              createdAt: new Date(now),
-              updatedAt: new Date(now)
-            });
-          }
-        }
-      );
-    });
+    await db.run(
+      `INSERT INTO categories (id, name, description, imageUrl, isActive, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, dto.name, dto.description, dto.imageUrl, 1, now, now]
+    );
+
+    return {
+      id,
+      name: dto.name,
+      description: dto.description,
+      imageUrl: dto.imageUrl,
+      isActive: true,
+      createdAt: new Date(now),
+      updatedAt: new Date(now)
+    };
   }
 
   async update(id: string, data: UpdateCategoryDTO): Promise<Category> {
-    const database = await this.db;
+    const db = await getDatabase();
     const now = new Date().toISOString();
     const updates: string[] = [];
     const values: any[] = [];
@@ -109,41 +68,25 @@ export class CategoryRepositoryImpl implements CategoryRepository {
     }
 
     if (updates.length === 0) {
-      return this.findById(id) as Promise<Category>;
+      return (await this.findById(id)) as Category;
     }
 
     updates.push('updatedAt = ?');
     values.push(now);
     values.push(id);
 
-    return new Promise((resolve, reject) => {
-      database.run(
-        `UPDATE categories SET ${updates.join(', ')} WHERE id = ?`,
-        values,
-        (err: any) => {
-          if (err) reject(err);
-          else {
-            resolve(this.findById(id) as Promise<Category>);
-          }
-        }
-      );
-    });
+    await db.run(
+      `UPDATE categories SET ${updates.join(', ')} WHERE id = ?`,
+      values
+    );
+
+    return (await this.findById(id)) as Category;
   }
 
   async delete(id: string): Promise<boolean> {
-    const database = await this.db;
-    return new Promise((resolve, reject) => {
-      database.run(
-        'DELETE FROM categories WHERE id = ?',
-        [id],
-        (err: any) => {
-          if (err) reject(err);
-          else {
-            resolve(true);
-          }
-        }
-      );
-    });
+    const db = await getDatabase();
+    await db.run('DELETE FROM categories WHERE id = ?', [id]);
+    return true;
   }
 
   toResponse(category: Category): CategoryResponse {

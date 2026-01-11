@@ -7,10 +7,12 @@ let db: Database | null = null;
 
 export const getDatabase = async (): Promise<Database> => {
   if (db) {
+    console.log('[DB] Returning existing database connection');
     return db;
   }
 
   const dbPath = path.resolve(process.cwd(), 'data', 'openmart.db');
+  console.log(`[DB] Connecting to database at: ${dbPath}`);
 
   // PERBAIKAN: Menggunakan 'open' dari library 'sqlite' agar support Async/Await
   try {
@@ -19,21 +21,27 @@ export const getDatabase = async (): Promise<Database> => {
       driver: sqlite3.Database
     });
     
-    console.log('Connected to SQLite database (Async Wrapper)');
+    // Configure for better async handling
+    await db.configure('busyTimeout', 5000);
+    console.log('[DB] Connected successfully to SQLite database');
     return db;
   } catch (err) {
-    console.error('Error connecting to database:', err);
+    console.error('[DB] Error connecting to database:', err);
     throw err;
   }
 };
 
 export const initializeDatabase = async (): Promise<void> => {
+  console.log('[DB] Starting database initialization...');
   const database = await getDatabase();
+  console.log('[DB] Database connection obtained for initialization');
 
   // PERBAIKAN: Tidak perlu .serialize() callback hell.
   // Gunakan await db.exec() untuk membuat tabel secara berurutan.
   
   try {
+    console.log('[DB] Creating tables if not exist...');
+    
     // Create users table
     await database.exec(`
       CREATE TABLE IF NOT EXISTS users (
@@ -46,6 +54,7 @@ export const initializeDatabase = async (): Promise<void> => {
         updatedAt TEXT NOT NULL
       );
     `);
+    console.log('[DB] Users table ready');
 
     // Create categories table
     await database.exec(`
@@ -59,6 +68,7 @@ export const initializeDatabase = async (): Promise<void> => {
         updatedAt TEXT NOT NULL
       );
     `);
+    console.log('[DB] Categories table ready');
 
     // Create products table
     await database.exec(`
@@ -76,6 +86,7 @@ export const initializeDatabase = async (): Promise<void> => {
         FOREIGN KEY (categoryId) REFERENCES categories(id)
       );
     `);
+    console.log('[DB] Products table ready');
 
     // Create orders table
     await database.exec(`
@@ -94,16 +105,18 @@ export const initializeDatabase = async (): Promise<void> => {
         FOREIGN KEY (userId) REFERENCES users(id)
       );
     `);
+    console.log('[DB] Orders table ready');
 
     // Create indexes
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_products_category ON products(categoryId)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(userId)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(isActive)`);
+    console.log('[DB] Indexes created');
 
-    console.log('Database tables initialized successfully');
+    console.log('✅ Database tables initialized successfully');
   } catch (error) {
-    console.error('Error initializing database tables:', error);
+    console.error('[DB] Error initializing database tables:', error);
     throw error;
   }
 };
