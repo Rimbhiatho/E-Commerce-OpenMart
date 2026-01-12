@@ -10,7 +10,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Initialize SharedPreferences
-  await AuthApiService.init();
+  await AuthApiService.ensureInitialized();
   
   runApp(const OpenMartApp());
 }

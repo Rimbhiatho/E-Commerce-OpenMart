@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:openmart/data/server/constants.dart';
 import 'package:openmart/data/server/model/user_model.dart';
 import 'package:openmart/data/server/service/auth_api_service.dart';
 
@@ -42,19 +44,28 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   String? getStoredToken() {
-    return authApiService.getStoredToken();
+    // Ambil dari static prefs yang sudah di-cache
+    return AuthApiService.staticPrefs?.getString(AppConstants.authTokenKey);
   }
 
   @override
   UserModel? getStoredUser() {
-    return authApiService.getStoredUser();
+    // Ambil dari static prefs yang sudah di-cache
+    final userData = AuthApiService.staticPrefs?.getString(AppConstants.userDataKey);
+    if (userData != null) {
+      try {
+        return UserModel.fromJson(jsonDecode(userData));
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
   }
 
   @override
   bool isAuthenticated() {
-    return authApiService.isAuthenticated();
+    // Ambil dari static prefs yang sudah di-cache
+    return AuthApiService.staticPrefs?.containsKey(AppConstants.authTokenKey) ?? false;
   }
 }
-
-
 

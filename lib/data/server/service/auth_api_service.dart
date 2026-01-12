@@ -7,35 +7,47 @@ import 'package:openmart/data/server/model/user_model.dart';
 /// AuthApiService handles all authentication-related API calls
 /// and manages token storage using SharedPreferences
 class AuthApiService {
+  static const Duration timeout = Duration(seconds: 15);
+  
   final String baseUrl = AppConstants.baseUrl;
-  final SharedPreferences _prefs;
+  
+  // Singleton pattern untuk menghindari race condition
+  static final AuthApiService instance = AuthApiService._();
+  factory AuthApiService() => instance;
+  AuthApiService._();
+  
+  static SharedPreferences? staticPrefs;
 
-  AuthApiService({SharedPreferences? prefs}) : _prefs = prefs ?? _staticPrefs;
+  // Initialize SharedPreferences dengan cara yang aman
+  static Future<SharedPreferences> ensureInitialized() async {
+    staticPrefs ??= await SharedPreferences.getInstance();
+    return staticPrefs!;
+  }
 
-  static late final SharedPreferences _staticPrefs;
+  AuthApiService.withPrefs(SharedPreferences prefs) {
+    staticPrefs = prefs;
+  }
 
-  // Initialize SharedPreferences once
-  static Future<SharedPreferences> init() async {
-    _staticPrefs = await SharedPreferences.getInstance();
-    return _staticPrefs;
+  Future<SharedPreferences> get prefsInstance async {
+    return ensureInitialized();
   }
 
   /// Login with email and password
   /// Returns AuthResponse with user and token on success
   /// Throws exception on failure
   Future<AuthResponse> login(String email, String password) async {
+    final prefs = await prefsInstance;
     final response = await http.post(
       Uri.parse('$baseUrl${AppConstants.loginEndpoint}'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'email': email, 'password': password}),
-    );
+    ).timeout(timeout);
 
     final Map<String, dynamic> json = _parseResponse(response);
 
     if (response.statusCode == 200 && json['success'] == true) {
       final authResponse = AuthResponse.fromJson(json['data']);
-      // Store token and user data
-      await _saveAuthData(authResponse);
+      await _saveAuthData(authResponse, prefs);
       return authResponse;
     } else {
       throw Exception(json['message'] ?? 'Login failed');
@@ -46,6 +58,7 @@ class AuthApiService {
   /// Returns AuthResponse with user and token on success
   Future<AuthResponse> register(String email, String password, String name, 
       {String role = 'customer'}) async {
+    final prefs = await prefsInstance;
     final response = await http.post(
       Uri.parse('$baseUrl${AppConstants.registerEndpoint}'),
       headers: {'Content-Type': 'application/json'},
@@ -55,14 +68,13 @@ class AuthApiService {
         'name': name,
         'role': role,
       }),
-    );
+    ).timeout(timeout);
 
     final Map<String, dynamic> json = _parseResponse(response);
 
     if (response.statusCode == 201 && json['success'] == true) {
       final authResponse = AuthResponse.fromJson(json['data']);
-      // Store token and user data
-      await _saveAuthData(authResponse);
+      await _saveAuthData(authResponse, prefs);
       return authResponse;
     } else {
       throw Exception(json['message'] ?? 'Registration failed');
@@ -74,7 +86,7 @@ class AuthApiService {
     final response = await http.get(
       Uri.parse('$baseUrl${AppConstants.profileEndpoint}'),
       headers: _getAuthHeaders(token),
-    );
+    ).timeout(timeout);
 
     final Map<String, dynamic> json = _parseResponse(response);
 
@@ -87,27 +99,28 @@ class AuthApiService {
 
   /// Logout - clears all stored authentication data
   Future<void> logout() async {
-    await _prefs.remove(AppConstants.authTokenKey);
-    await _prefs.remove(AppConstants.userDataKey);
+    final prefs = await prefsInstance;
+    await prefs.remove(AppConstants.authTokenKey);
+    await prefs.remove(AppConstants.userDataKey);
   }
 
   /// Save authentication data to SharedPreferences
-  Future<void> _saveAuthData(AuthResponse authResponse) async {
-    await _prefs.setString(AppConstants.authTokenKey, authResponse.token);
-    await _prefs.setString(
+  Future<void> _saveAuthData(AuthResponse authResponse, SharedPreferences prefs) async {
+    await prefs.setString(AppConstants.authTokenKey, authResponse.token);
+    await prefs.setString(
       AppConstants.userDataKey, 
       jsonEncode(authResponse.user.toMap())
     );
   }
 
-  /// Get stored authentication token
+  /// Get stored authentication token - sync version using cached staticPrefs
   String? getStoredToken() {
-    return _prefs.getString(AppConstants.authTokenKey);
+    return staticPrefs?.getString(AppConstants.authTokenKey);
   }
 
-  /// Get stored user data
+  /// Get stored user data - sync version using cached staticPrefs
   UserModel? getStoredUser() {
-    final userData = _prefs.getString(AppConstants.userDataKey);
+    final userData = staticPrefs?.getString(AppConstants.userDataKey);
     if (userData != null) {
       try {
         return UserModel.fromJson(jsonDecode(userData));
@@ -118,9 +131,9 @@ class AuthApiService {
     return null;
   }
 
-  /// Check if user is authenticated
+  /// Check if user is authenticated - sync version using cached staticPrefs
   bool isAuthenticated() {
-    return _prefs.containsKey(AppConstants.authTokenKey);
+    return staticPrefs?.containsKey(AppConstants.authTokenKey) ?? false;
   }
 
   /// Helper to parse JSON response
