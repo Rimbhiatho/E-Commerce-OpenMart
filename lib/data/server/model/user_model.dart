@@ -19,9 +19,9 @@ class UserModel {
       email: json['email'] ?? '',
       name: json['name'] ?? '',
       role: json['role'] ?? 'customer',
-      createdAt: json['createdAt'] != null 
-        ? DateTime.tryParse(json['createdAt']) 
-        : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'])
+          : null,
     );
   }
 
@@ -40,10 +40,7 @@ class AuthResponse {
   final UserModel user;
   final String token;
 
-  AuthResponse({
-    required this.user,
-    required this.token,
-  });
+  AuthResponse({required this.user, required this.token});
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
     return AuthResponse(
@@ -57,16 +54,10 @@ class LoginRequest {
   final String email;
   final String password;
 
-  LoginRequest({
-    required this.email,
-    required this.password,
-  });
+  LoginRequest({required this.email, required this.password});
 
   Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'password': password,
-    };
+    return {'email': email, 'password': password};
   }
 }
 
@@ -84,12 +75,6 @@ class RegisterRequest {
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'email': email,
-      'password': password,
-      'name': name,
-      'role': role,
-    };
+    return {'email': email, 'password': password, 'name': name, 'role': role};
   }
 }
-

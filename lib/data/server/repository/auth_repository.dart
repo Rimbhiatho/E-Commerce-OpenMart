@@ -7,7 +7,12 @@ import 'package:openmart/data/server/service/auth_api_service.dart';
 /// Abstract interface for authentication repository
 abstract class AuthRepository {
   Future<AuthResponse> login(String email, String password);
-  Future<AuthResponse> register(String email, String password, String name, {String role});
+  Future<AuthResponse> register(
+    String email,
+    String password,
+    String name, {
+    String role,
+  });
   Future<UserModel> getProfile(String token);
   Future<void> logout();
   String? getStoredToken();
@@ -27,8 +32,12 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<AuthResponse> register(String email, String password, String name, 
-      {String role = 'customer'}) {
+  Future<AuthResponse> register(
+    String email,
+    String password,
+    String name, {
+    String role = 'customer',
+  }) {
     return authApiService.register(email, password, name, role: role);
   }
 
@@ -51,7 +60,9 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   UserModel? getStoredUser() {
     // Ambil dari static prefs yang sudah di-cache
-    final userData = AuthApiService.staticPrefs?.getString(AppConstants.userDataKey);
+    final userData = AuthApiService.staticPrefs?.getString(
+      AppConstants.userDataKey,
+    );
     if (userData != null) {
       try {
         return UserModel.fromJson(jsonDecode(userData));
@@ -65,7 +76,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   bool isAuthenticated() {
     // Ambil dari static prefs yang sudah di-cache
-    return AuthApiService.staticPrefs?.containsKey(AppConstants.authTokenKey) ?? false;
+    return AuthApiService.staticPrefs?.containsKey(AppConstants.authTokenKey) ??
+        false;
   }
 }
-

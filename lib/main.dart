@@ -8,10 +8,10 @@ import 'package:openmart/presentation/controllers/auth_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize SharedPreferences
   await AuthApiService.ensureInitialized();
-  
+
   runApp(const OpenMartApp());
 }
 
@@ -23,9 +23,7 @@ class OpenMartApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         // Provide AuthApiService
-        Provider<AuthApiService>(
-          create: (_) => AuthApiService(),
-        ),
+        Provider<AuthApiService>(create: (_) => AuthApiService()),
         // Provide AuthRepository
         Provider<AuthRepository>(
           create: (context) => AuthRepositoryImpl(
@@ -34,9 +32,8 @@ class OpenMartApp extends StatelessWidget {
         ),
         // Provide AuthProvider
         ChangeNotifierProvider<AuthProvider>(
-          create: (context) => AuthProvider(
-            authRepository: context.read<AuthRepository>(),
-          ),
+          create: (context) =>
+              AuthProvider(authRepository: context.read<AuthRepository>()),
         ),
       ],
       child: MaterialApp(
@@ -85,4 +82,3 @@ class _SplashScreenState extends State<SplashScreen> {
     );
   }
 }
-

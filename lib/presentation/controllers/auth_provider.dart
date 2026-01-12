@@ -27,7 +27,7 @@ class AuthProvider with ChangeNotifier {
   void _loadStoredSession() {
     _token = authRepository.getStoredToken();
     _user = authRepository.getStoredUser();
-    
+
     if (_token != null) {
       notifyListeners();
     }
@@ -123,4 +123,3 @@ class AuthProvider with ChangeNotifier {
     }
   }
 }
-

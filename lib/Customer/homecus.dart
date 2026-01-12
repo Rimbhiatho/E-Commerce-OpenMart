@@ -19,6 +19,10 @@ class CustomerHome extends StatefulWidget {
 class _CustomerHomeState extends State<CustomerHome> {
   late final GetProductsUseCase useCase;
   late Future<List<ProductModel>> futureProducts;
+  int _selectedIndex = 0;
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -28,17 +32,44 @@ class _CustomerHomeState extends State<CustomerHome> {
     final repository = ProductRepository(apiService, dbHelper);
     useCase = GetProductsUseCase(repository);
     futureProducts = useCase.execute();
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _searchQuery = _searchController.text.toLowerCase();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _handleLogout() async {
     final authProvider = context.read<AuthProvider>();
     await authProvider.logout();
-    
+
     if (mounted) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const LoginPage()),
       );
     }
+  }
+
+  Widget searchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Search products',
+          prefixIcon: Icon(Icons.search),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+        ),
+      ),
+    );
   }
 
   @override
@@ -49,15 +80,14 @@ class _CustomerHomeState extends State<CustomerHome> {
       appBar: AppBar(
         title: const Text('OpenMart'),
         actions: [
-          // Show user name if logged in
           if (authProvider.user != null)
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: Center(
                 child: Text(
-                  authProvider.user!.name,
+                  "Wolcome " + authProvider.user!.name,
                   style: const TextStyle(
-                    fontSize: 14,
+                    fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -98,29 +128,69 @@ class _CustomerHomeState extends State<CustomerHome> {
             return const Center(child: Text('No products available'));
           } else {
             final products = snapshot.data!;
-            return GridView.builder(
-              padding: const EdgeInsets.all(8.0),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2, // 2 columns
-                childAspectRatio: 0.7, // more square shape
-                crossAxisSpacing: 8.0,
-                mainAxisSpacing: 8.0,
-              ),
-              itemCount: products.length,
-              itemBuilder: (context, index) {
-                final product = products[index];
-                return CartProduct(
-                  imageurl: product.image,
-                  productname: product.title,
-                  productprice: product.price,
-                  onpress: () {},
-                );
-              },
+            final filteredProducts = products
+                .where(
+                  (product) =>
+                      product.title.toLowerCase().contains(_searchQuery),
+                )
+                .toList();
+            return Column(
+              children: [
+                searchBar(),
+                Expanded(
+                  child: GridView.builder(
+                    padding: const EdgeInsets.all(8.0),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, // 2 columns
+                          childAspectRatio: 0.7, // more square shape
+                          crossAxisSpacing: 8.0,
+                          mainAxisSpacing: 8.0,
+                        ),
+                    itemCount: filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = filteredProducts[index];
+                      return CartProduct(
+                        imageurl: product.image,
+                        productname: product.title,
+                        productprice: product.price,
+                        onpress: () {},
+                      );
+                    },
+                  ),
+                ),
+              ],
             );
           }
         },
       ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) =>
+            setState(() => _selectedIndex = index),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.add_shopping_cart_outlined),
+            selectedIcon: Icon(Icons.add_shopping_cart_rounded),
+            label: 'Keranjang',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.article_outlined),
+            selectedIcon: Icon(Icons.article_rounded),
+            label: 'Transaksi',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profile',
+          ),
+        ],
+      ),
     );
   }
 }
-

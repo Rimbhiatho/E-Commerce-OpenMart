@@ -14,4 +14,3 @@ class AppConstants {
   static const String categoriesEndpoint = '/categories';
   static const String ordersEndpoint = '/orders';
 }
-

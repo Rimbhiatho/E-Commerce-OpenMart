@@ -15,7 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  
+
   bool _isLoginMode = true;
   bool _obscurePassword = true;
 
@@ -31,7 +31,7 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
-    
+
     bool success;
     if (_isLoginMode) {
       success = await authProvider.login(
@@ -123,16 +123,13 @@ class _LoginPageState extends State<LoginPage> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _isLoginMode 
-                    ? 'Sign in to continue shopping' 
-                    : 'Join OpenMart today',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+                  _isLoginMode
+                      ? 'Sign in to continue shopping'
+                      : 'Join OpenMart today',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
                 const SizedBox(height: 32),
-                
+
                 // Name field (only for registration)
                 if (!_isLoginMode) ...[
                   TextFormField(
@@ -147,7 +144,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 16),
                 ],
-                
+
                 // Email field
                 TextFormField(
                   controller: _emailController,
@@ -160,9 +157,9 @@ class _LoginPageState extends State<LoginPage> {
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Password field
                 TextFormField(
                   controller: _passwordController,
@@ -172,9 +169,9 @@ class _LoginPageState extends State<LoginPage> {
                     prefixIcon: const Icon(Icons.lock),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword 
-                          ? Icons.visibility_off 
-                          : Icons.visibility,
+                        _obscurePassword
+                            ? Icons.visibility_off
+                            : Icons.visibility,
                       ),
                       onPressed: () {
                         setState(() {
@@ -187,9 +184,9 @@ class _LoginPageState extends State<LoginPage> {
                   obscureText: _obscurePassword,
                   onFieldSubmitted: (_) => _submitForm(),
                 ),
-                
+
                 const SizedBox(height: 24),
-                
+
                 // Submit button
                 SizedBox(
                   width: double.infinity,
@@ -201,23 +198,23 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     onPressed: authProvider.isLoading ? null : _submitForm,
                     child: authProvider.isLoading
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            _isLoginMode ? 'Login' : 'Register',
+                            style: const TextStyle(color: Colors.white),
                           ),
-                        )
-                      : Text(
-                          _isLoginMode ? 'Login' : 'Register',
-                          style: const TextStyle(color: Colors.white),
-                        ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 16),
-                
+
                 // Switch between login/register
                 TextButton(
                   onPressed: () {
@@ -229,25 +226,19 @@ class _LoginPageState extends State<LoginPage> {
                   },
                   child: Text(
                     _isLoginMode
-                      ? "Don't have an account? Register"
-                      : 'Already have an account? Login',
-                    style: const TextStyle(
-                      color: Colors.blue,
-                      fontSize: 14,
-                    ),
+                        ? "Don't have an account? Register"
+                        : 'Already have an account? Login',
+                    style: const TextStyle(color: Colors.blue, fontSize: 14),
                   ),
                 ),
-                
+
                 // Error message
                 if (authProvider.error != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
                     child: Text(
                       authProvider.error!,
-                      style: const TextStyle(
-                        color: Colors.red,
-                        fontSize: 14,
-                      ),
+                      style: const TextStyle(color: Colors.red, fontSize: 14),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -259,4 +250,3 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
-
