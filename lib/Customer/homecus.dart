@@ -23,6 +23,8 @@ class _CustomerHomeState extends State<CustomerHome> {
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String _selectedCategory = '';
+  List<String> _categories = [];
 
   @override
   void initState() {
@@ -38,6 +40,12 @@ class _CustomerHomeState extends State<CustomerHome> {
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text.toLowerCase();
+    });
+  }
+
+  void _onCategorySelected(String category) {
+    setState(() {
+      _selectedCategory = category;
     });
   }
 
@@ -72,6 +80,33 @@ class _CustomerHomeState extends State<CustomerHome> {
     );
   }
 
+  Widget categorySelector() {
+    return Container(
+      height: 50,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+        itemCount: _categories.length + 1,
+        itemBuilder: (context, index) {
+          final category = index == 0 ? 'All' : _categories[index - 1];
+          final isSelected =
+              (index == 0 && _selectedCategory.isEmpty) ||
+              _selectedCategory == category;
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4.0),
+            child: FilterChip(
+              label: Text(category),
+              selected: isSelected,
+              onSelected: (selected) {
+                _onCategorySelected(selected ? category : '');
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -93,7 +128,7 @@ class _CustomerHomeState extends State<CustomerHome> {
                 ),
               ),
             ),
-          // Logout button
+
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _handleLogout,
@@ -128,22 +163,26 @@ class _CustomerHomeState extends State<CustomerHome> {
             return const Center(child: Text('No products available'));
           } else {
             final products = snapshot.data!;
+            _categories = products.map((p) => p.category).toSet().toList();
             final filteredProducts = products
                 .where(
                   (product) =>
-                      product.title.toLowerCase().contains(_searchQuery),
+                      product.title.toLowerCase().contains(_searchQuery) &&
+                      (_selectedCategory.isEmpty ||
+                          product.category == _selectedCategory),
                 )
                 .toList();
             return Column(
               children: [
                 searchBar(),
+                categorySelector(),
                 Expanded(
                   child: GridView.builder(
                     padding: const EdgeInsets.all(8.0),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2, // 2 columns
-                          childAspectRatio: 0.7, // more square shape
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.7,
                           crossAxisSpacing: 8.0,
                           mainAxisSpacing: 8.0,
                         ),
