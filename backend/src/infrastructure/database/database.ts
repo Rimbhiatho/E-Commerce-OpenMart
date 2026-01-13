@@ -50,6 +50,7 @@ export const initializeDatabase = async (): Promise<void> => {
         password TEXT NOT NULL,
         name TEXT NOT NULL,
         role TEXT CHECK(role IN ('customer', 'admin')) DEFAULT 'customer',
+        balance REAL DEFAULT 0,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL
       );
@@ -107,11 +108,28 @@ export const initializeDatabase = async (): Promise<void> => {
     `);
     console.log('[DB] Orders table ready');
 
+    // Create wallet_transactions table for wallet audit trail
+    await database.exec(`
+      CREATE TABLE IF NOT EXISTS wallet_transactions (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        type TEXT CHECK(type IN ('credit', 'debit')) NOT NULL,
+        amount REAL NOT NULL,
+        balanceBefore REAL NOT NULL,
+        balanceAfter REAL NOT NULL,
+        description TEXT,
+        createdAt TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users(id)
+      );
+    `);
+    console.log('[DB] Wallet transactions table ready');
+
     // Create indexes
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_products_category ON products(categoryId)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(userId)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(isActive)`);
+    await database.exec(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user ON wallet_transactions(userId)`);
     console.log('[DB] Indexes created');
 
     console.log('✅ Database tables initialized successfully');

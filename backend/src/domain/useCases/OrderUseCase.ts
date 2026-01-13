@@ -1,6 +1,7 @@
 import { OrderRepository } from '../repositories/OrderRepository';
 import { ProductRepository } from '../repositories/ProductRepository';
 import { UserRepository } from '../repositories/UserRepository';
+import { WalletRepository } from '../repositories/WalletRepository';
 import { 
   CreateOrderDTO, 
   UpdateOrderStatusDTO, 
@@ -16,7 +17,8 @@ export class OrderUseCase {
   constructor(
     private orderRepository: OrderRepository,
     private productRepository: ProductRepository,
-    private userRepository: UserRepository
+    private userRepository: UserRepository,
+    private walletRepository: WalletRepository
   ) {}
 
   async createOrder(dto: CreateOrderDTO): Promise<Order> {
@@ -25,6 +27,7 @@ export class OrderUseCase {
       throw new Error('User not found');
     }
 
+    // Calculate total amount first
     const orderItems: OrderItem[] = [];
     let totalAmount = 0;
 
@@ -51,9 +54,27 @@ export class OrderUseCase {
       });
 
       totalAmount += itemTotal;
-      await this.productRepository.updateStock(product.id, -item.quantity);
     }
 
+    // NEW: Validate user has sufficient balance
+    const currentBalance = await this.walletRepository.getBalance(dto.userId);
+    if (currentBalance < totalAmount) {
+      throw new Error(`Insufficient Funds. Required: ${totalAmount}, Available: ${currentBalance}`);
+    }
+
+    // NEW: Deduct balance from wallet (start transaction)
+    const paymentResult = await this.walletRepository.deduct(
+      dto.userId,
+      totalAmount,
+      `Payment for order`
+    );
+
+    // Update product stock after successful payment
+    for (const item of dto.items) {
+      await this.productRepository.updateStock(item.productId, -item.quantity);
+    }
+
+    // Create order with payment info
     const order = await this.orderRepository.create({
       userId: dto.userId,
       items: orderItems,
@@ -61,8 +82,8 @@ export class OrderUseCase {
       status: 'pending',
       shippingAddress: dto.shippingAddress,
       paymentMethod: dto.paymentMethod,
-      paymentStatus: 'pending',
-      notes: dto.notes
+      paymentStatus: 'paid', // Mark as paid since wallet was deducted
+      notes: dto.notes ? `${dto.notes}\nWallet Transaction ID: ${paymentResult.transaction.id}` : `Wallet Transaction ID: ${paymentResult.transaction.id}`
     });
 
     return order;
@@ -104,10 +125,20 @@ export class OrderUseCase {
       throw new Error(`Cannot transition from ${order.status} to ${dto.status}`);
     }
 
+    // Handle stock restoration on cancellation (only for non-pending orders)
     if (dto.status === 'cancelled' && order.status !== 'pending') {
       for (const item of order.items) {
         await this.productRepository.updateStock(item.productId, item.quantity);
       }
+    }
+
+    // Handle refund to wallet when order is refunded
+    if (dto.status === 'refunded' && order.status === 'delivered') {
+      // Refund the amount back to user's wallet
+      await this.walletRepository.topUp(order.userId, {
+        amount: order.totalAmount,
+        description: `Refund for order ${id}`
+      });
     }
 
     return this.orderRepository.updateStatus(id, dto);

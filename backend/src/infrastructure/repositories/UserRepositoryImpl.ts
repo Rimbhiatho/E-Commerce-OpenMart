@@ -26,11 +26,12 @@ export class UserRepositoryImpl implements UserRepository {
     const db = await getDatabase();
     const id = uuidv4();
     const now = new Date().toISOString();
+    const balance = dto.balance ?? 0;
 
     await db.run(
-      `INSERT INTO users (id, email, password, name, role, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, dto.email, dto.password, dto.name, dto.role || 'customer', now, now]
+      `INSERT INTO users (id, email, password, name, role, balance, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, dto.email, dto.password, dto.name, dto.role || 'customer', balance, now, now]
     );
 
     return {
@@ -39,6 +40,7 @@ export class UserRepositoryImpl implements UserRepository {
       password: dto.password,
       name: dto.name,
       role: dto.role || 'customer',
+      balance,
       createdAt: new Date(now),
       updatedAt: new Date(now)
     };
@@ -96,6 +98,7 @@ export class UserRepositoryImpl implements UserRepository {
       password: row.password,
       name: row.name,
       role: row.role,
+      balance: row.balance || 0,
       createdAt: new Date(row.createdAt),
       updatedAt: new Date(row.updatedAt)
     };

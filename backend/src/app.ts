@@ -10,6 +10,7 @@ import { setupProductRoutes } from './presentation/routes/productRoutes';
 import { setupCategoryRoutes } from './presentation/routes/categoryRoutes';
 import { setupOrderRoutes } from './presentation/routes/orderRoutes';
 import { setupInventoryRoutes } from './presentation/routes/inventoryRoutes';
+import { setupWalletRoutes } from './presentation/routes/walletRoutes';
 
 // Import controllers
 import { AuthController } from './presentation/controllers/AuthController';
@@ -17,6 +18,7 @@ import { ProductController } from './presentation/controllers/ProductController'
 import { CategoryController } from './presentation/controllers/CategoryController';
 import { OrderController } from './presentation/controllers/OrderController';
 import { InventoryController } from './presentation/controllers/InventoryController';
+import { WalletController } from './presentation/controllers/WalletController';
 
 // Import use cases
 import { AuthUseCase } from './domain/useCases/AuthUseCase';
@@ -24,12 +26,14 @@ import { ProductUseCase } from './domain/useCases/ProductUseCase';
 import { CategoryUseCase } from './domain/useCases/CategoryUseCase';
 import { OrderUseCase } from './domain/useCases/OrderUseCase';
 import { InventoryUseCase } from './domain/useCases/InventoryUseCase';
+import { WalletUseCase } from './domain/useCases/WalletUseCase';
 
 // Import repositories
 import { userRepository } from './infrastructure/repositories/UserRepositoryImpl';
 import { productRepository } from './infrastructure/repositories/ProductRepositoryImpl';
 import { categoryRepository } from './infrastructure/repositories/CategoryRepositoryImpl';
 import { orderRepository } from './infrastructure/repositories/OrderRepositoryImpl';
+import { walletRepository } from './infrastructure/repositories/WalletRepositoryImpl';
 
 dotenv.config();
 
@@ -46,10 +50,11 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true }));
 
   // Initialize use cases
-  const authUseCase = new AuthUseCase(userRepository, jwtSecret);
+  const authUseCase = new AuthUseCase(userRepository, walletRepository, jwtSecret);
   const productUseCase = new ProductUseCase(productRepository);
   const categoryUseCase = new CategoryUseCase(categoryRepository);
-  const orderUseCase = new OrderUseCase(orderRepository, productRepository, userRepository);
+  const walletUseCase = new WalletUseCase(walletRepository);
+  const orderUseCase = new OrderUseCase(orderRepository, productRepository, userRepository, walletRepository);
   const inventoryUseCase = new InventoryUseCase(productRepository);
 
   // Initialize controllers
@@ -58,6 +63,7 @@ export function createApp(): Application {
   const categoryController = new CategoryController(categoryUseCase);
   const orderController = new OrderController(orderUseCase);
   const inventoryController = new InventoryController(inventoryUseCase);
+  const walletController = new WalletController(walletUseCase);
 
   // Health check
   app.get('/health', (req: Request, res: Response) => {
@@ -78,6 +84,7 @@ export function createApp(): Application {
   app.use('/api/categories', setupCategoryRoutes(categoryController, jwtSecret));
   app.use('/api/orders', setupOrderRoutes(orderController, jwtSecret));
   app.use('/api/inventory', setupInventoryRoutes(inventoryController, jwtSecret));
+  app.use('/api/wallet', setupWalletRoutes(walletController, jwtSecret));
 
   // 404 handler (Jika route tidak ditemukan di atas)
   app.use((req: Request, res: Response) => {

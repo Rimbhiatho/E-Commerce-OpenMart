@@ -1,4 +1,5 @@
 import { UserRepository } from '../repositories/UserRepository';
+import { WalletRepository } from '../repositories/WalletRepository';
 import { CreateUserDTO, LoginDTO, AuthResponse, User } from '../entities/User';
 import bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
@@ -6,6 +7,7 @@ import * as jwt from 'jsonwebtoken';
 export class AuthUseCase {
   constructor(
     private userRepository: UserRepository,
+    private walletRepository: WalletRepository,
     private jwtSecret: string,
     private jwtExpiresIn: string = '24h'
   ) {}
@@ -22,6 +24,9 @@ export class AuthUseCase {
       password: hashedPassword,
       role: dto.role || 'customer'
     });
+
+    // Initialize wallet balance for new user
+    await this.walletRepository.initializeBalance(user.id);
 
     const token = this.generateToken(user);
     return {
