@@ -8,6 +8,9 @@ import 'package:openmart/data/local/db/database_helper.dart';
 import 'package:openmart/data/server/repository/product_repository.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/login_page.dart';
+import 'package:openmart/Customer/pages/keranjang.dart';
+import 'package:openmart/Customer/pages/history.dart';
+import 'package:openmart/Customer/pages/profil.dart';
 
 class CustomerHome extends StatefulWidget {
   const CustomerHome({super.key});
@@ -23,8 +26,10 @@ class _CustomerHomeState extends State<CustomerHome> {
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
-  String _selectedCategory = '';
+  String _selectedCategory = 'All';
   List<String> _categories = [];
+
+  late final List<Widget> _pages;
 
   @override
   void initState() {
@@ -35,6 +40,12 @@ class _CustomerHomeState extends State<CustomerHome> {
     useCase = GetProductsUseCase(repository);
     futureProducts = useCase.execute();
     _searchController.addListener(_onSearchChanged);
+    _pages = [
+      _homePage(),
+      const KeranjangPage(),
+      const HistoryPage(),
+      const ProfilePage(),
+    ];
   }
 
   void _onSearchChanged() {
@@ -66,6 +77,75 @@ class _CustomerHomeState extends State<CustomerHome> {
     }
   }
 
+  Widget _homePage() {
+    return FutureBuilder<List<ProductModel>>(
+      future: futureProducts,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('Error: ${snapshot.error}'),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      futureProducts = useCase.execute();
+                    });
+                  },
+                  child: const Text('Retry'),
+                ),
+              ],
+            ),
+          );
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text('No products available'));
+        } else {
+          final products = snapshot.data!;
+          _categories = products.map((p) => p.category).toSet().toList();
+          final filteredProducts = products
+              .where(
+                (product) =>
+                    product.title.toLowerCase().contains(_searchQuery) &&
+                    (_selectedCategory == 'All' ||
+                        product.category == _selectedCategory),
+              )
+              .toList();
+          return Column(
+            children: [
+              searchBar(),
+              categorySelector(),
+              Expanded(
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(8.0),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 0.7,
+                    crossAxisSpacing: 8.0,
+                    mainAxisSpacing: 8.0,
+                  ),
+                  itemCount: filteredProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = filteredProducts[index];
+                    return CartProduct(
+                      imageurl: product.image,
+                      productname: product.title,
+                      productprice: product.price,
+                      onpress: () {},
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        }
+      },
+    );
+  }
+
   Widget searchBar() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -89,17 +169,13 @@ class _CustomerHomeState extends State<CustomerHome> {
         itemCount: _categories.length + 1,
         itemBuilder: (context, index) {
           final category = index == 0 ? 'All' : _categories[index - 1];
-          final isSelected =
-              (index == 0 && _selectedCategory.isEmpty) ||
-              _selectedCategory == category;
+          final isSelected = _selectedCategory == category;
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4.0),
             child: FilterChip(
               label: Text(category),
               selected: isSelected,
-              onSelected: (selected) {
-                _onCategorySelected(selected ? category : '');
-              },
+              onSelected: (_) => _onCategorySelected(category),
             ),
           );
         },
@@ -136,73 +212,7 @@ class _CustomerHomeState extends State<CustomerHome> {
           ),
         ],
       ),
-      body: FutureBuilder<List<ProductModel>>(
-        future: futureProducts,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text('Error: ${snapshot.error}'),
-                  const SizedBox(height: 16),
-                  ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        futureProducts = useCase.execute();
-                      });
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text('No products available'));
-          } else {
-            final products = snapshot.data!;
-            _categories = products.map((p) => p.category).toSet().toList();
-            final filteredProducts = products
-                .where(
-                  (product) =>
-                      product.title.toLowerCase().contains(_searchQuery) &&
-                      (_selectedCategory.isEmpty ||
-                          product.category == _selectedCategory),
-                )
-                .toList();
-            return Column(
-              children: [
-                searchBar(),
-                categorySelector(),
-                Expanded(
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(8.0),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.7,
-                          crossAxisSpacing: 8.0,
-                          mainAxisSpacing: 8.0,
-                        ),
-                    itemCount: filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = filteredProducts[index];
-                      return CartProduct(
-                        imageurl: product.image,
-                        productname: product.title,
-                        productprice: product.price,
-                        onpress: () {},
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          }
-        },
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) =>
