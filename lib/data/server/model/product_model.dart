@@ -22,7 +22,9 @@ class ProductModel {
       description: json['description'],
       price: (json['price'] as num).toDouble(),
       category: json['category'],
-      image: json['image'],
+      image: json['id'] == 1
+          ? 'https://content.wolfswinkel.nl/1556616841/dossier-art/FJALLRAVEN_24225/F24225-030_%20FJALLRAVEN%20FOLDSACK%20No.3%20DARK%20GREY.jpg?size=product-detail&format=jpg'
+          : json['image'],
     );
   }
 

@@ -1,8 +1,8 @@
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
 import path from 'path';
+import fetch from 'node-fetch';
 
-// Variabel untuk menyimpan koneksi
 let db: Database | null = null;
 
 export const getDatabase = async (): Promise<Database> => {
@@ -14,14 +14,12 @@ export const getDatabase = async (): Promise<Database> => {
   const dbPath = path.resolve(process.cwd(), 'data', 'openmart.db');
   console.log(`[DB] Connecting to database at: ${dbPath}`);
 
-  // PERBAIKAN: Menggunakan 'open' dari library 'sqlite' agar support Async/Await
   try {
     db = await open({
       filename: dbPath,
       driver: sqlite3.Database
     });
-    
-    // Configure for better async handling
+
     await db.configure('busyTimeout', 5000);
     console.log('[DB] Connected successfully to SQLite database');
     return db;
@@ -36,13 +34,9 @@ export const initializeDatabase = async (): Promise<void> => {
   const database = await getDatabase();
   console.log('[DB] Database connection obtained for initialization');
 
-  // PERBAIKAN: Tidak perlu .serialize() callback hell.
-  // Gunakan await db.exec() untuk membuat tabel secara berurutan.
-  
   try {
     console.log('[DB] Creating tables if not exist...');
-    
-    // Create users table
+
     await database.exec(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
@@ -55,9 +49,7 @@ export const initializeDatabase = async (): Promise<void> => {
         updatedAt TEXT NOT NULL
       );
     `);
-    console.log('[DB] Users table ready');
 
-    // Create categories table
     await database.exec(`
       CREATE TABLE IF NOT EXISTS categories (
         id TEXT PRIMARY KEY,
@@ -69,12 +61,11 @@ export const initializeDatabase = async (): Promise<void> => {
         updatedAt TEXT NOT NULL
       );
     `);
-    console.log('[DB] Categories table ready');
 
-    // Create products table
     await database.exec(`
       CREATE TABLE IF NOT EXISTS products (
         id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
         price REAL NOT NULL,
@@ -87,9 +78,7 @@ export const initializeDatabase = async (): Promise<void> => {
         FOREIGN KEY (categoryId) REFERENCES categories(id)
       );
     `);
-    console.log('[DB] Products table ready');
 
-    // Create orders table
     await database.exec(`
       CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
@@ -106,9 +95,7 @@ export const initializeDatabase = async (): Promise<void> => {
         FOREIGN KEY (userId) REFERENCES users(id)
       );
     `);
-    console.log('[DB] Orders table ready');
 
-    // Create wallet_transactions table for wallet audit trail
     await database.exec(`
       CREATE TABLE IF NOT EXISTS wallet_transactions (
         id TEXT PRIMARY KEY,
@@ -122,20 +109,49 @@ export const initializeDatabase = async (): Promise<void> => {
         FOREIGN KEY (userId) REFERENCES users(id)
       );
     `);
-    console.log('[DB] Wallet transactions table ready');
 
-    // Create indexes
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_products_category ON products(categoryId)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(userId)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(isActive)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user ON wallet_transactions(userId)`);
-    console.log('[DB] Indexes created');
 
     console.log('✅ Database tables initialized successfully');
+
+    await seedProducts(database);
   } catch (error) {
     console.error('[DB] Error initializing database tables:', error);
     throw error;
+  }
+};
+
+export const seedProducts = async (database: Database): Promise<void> => {
+  console.log('[DB] Seeding products from FakeStoreAPI...');
+  try {
+    const response = await fetch('https://fakestoreapi.com/products');
+    const products = await response.json();
+
+    for (const p of products) {
+      await database.run(`
+        INSERT OR REPLACE INTO products 
+        (id, title, name, description, price, stock, categoryId, imageUrl, isActive, createdAt, updatedAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      `, [
+        p.id,
+        p.title,
+        p.title,
+        p.description,
+        p.price,
+        10,
+        p.category,
+        p.image,
+        1
+      ]);
+    }
+
+    console.log('[DB] Products seeded successfully');
+  } catch (err) {
+    console.error('[DB] Failed to seed products:', err);
   }
 };
 
@@ -147,5 +163,4 @@ export const closeDatabase = async (): Promise<void> => {
   }
 };
 
-// Export db instance (walaupun disarankan pakai getDatabase() agar aman)
 export { db as database };
