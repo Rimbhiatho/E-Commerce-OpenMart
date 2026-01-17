@@ -9,7 +9,11 @@ import 'package:openmart/data/server/constants.dart';
 abstract class CartRepository {
   Future<CartResponse> getCart(String token);
   Future<CartItemModel> addToCart(String token, AddToCartRequest request);
-  Future<CartItemModel?> updateQuantity(String token, String productId, int quantity);
+  Future<CartItemModel?> updateQuantity(
+    String token,
+    String productId,
+    int quantity,
+  );
   Future<bool> removeFromCart(String token, String productId);
   Future<bool> clearCart(String token);
 }
@@ -20,9 +24,9 @@ class CartRepositoryImpl implements CartRepository {
 
   CartRepositoryImpl({required this.cartApiService});
 
-  // Local cache key for cart data
-  static const String _cartCacheKey = 'cart_cache';
-  static const String _cartTimestampKey = 'cart_timestamp';
+  // Local cache base key for cart data; keys are suffixed by user id
+  static const String _cartCacheKeyBase = 'cart_cache';
+  static const String _cartTimestampKeyBase = 'cart_timestamp';
 
   @override
   Future<CartResponse> getCart(String token) {
@@ -54,17 +58,36 @@ class CartRepositoryImpl implements CartRepository {
   }
 
   /// Save cart to local cache (for offline access)
-  static Future<void> saveCartToCache(CartResponse cart) async {
+  /// Save cart to local cache. If [userId] is provided, the cache is
+  /// stored per-user under a key suffixed with the user id.
+  static Future<void> saveCartToCache(
+    CartResponse cart, {
+    String? userId,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_cartCacheKey, jsonEncode(cart.toMap()));
-    await prefs.setInt(_cartTimestampKey, DateTime.now().millisecondsSinceEpoch);
+    final key = userId == null
+        ? _cartCacheKeyBase
+        : '${_cartCacheKeyBase}_$userId';
+    final tsKey = userId == null
+        ? _cartTimestampKeyBase
+        : '${_cartTimestampKeyBase}_$userId';
+    await prefs.setString(key, jsonEncode(cart.toMap()));
+    await prefs.setInt(tsKey, DateTime.now().millisecondsSinceEpoch);
   }
 
   /// Get cart from local cache
-  static Future<CartResponse?> getCartFromCache() async {
+  /// Get cart from local cache for optional [userId]. Returns null if not
+  /// present or expired.
+  static Future<CartResponse?> getCartFromCache({String? userId}) async {
     final prefs = await SharedPreferences.getInstance();
-    final cartData = prefs.getString(_cartCacheKey);
-    final timestamp = prefs.getInt(_cartTimestampKey);
+    final key = userId == null
+        ? _cartCacheKeyBase
+        : '${_cartCacheKeyBase}_$userId';
+    final tsKey = userId == null
+        ? _cartTimestampKeyBase
+        : '${_cartTimestampKeyBase}_$userId';
+    final cartData = prefs.getString(key);
+    final timestamp = prefs.getInt(tsKey);
 
     if (cartData == null || timestamp == null) {
       return null;
@@ -74,8 +97,8 @@ class CartRepositoryImpl implements CartRepository {
     final age = DateTime.now().millisecondsSinceEpoch - timestamp;
     if (age > 24 * 60 * 60 * 1000) {
       // Cache expired
-      await prefs.remove(_cartCacheKey);
-      await prefs.remove(_cartTimestampKey);
+      await prefs.remove(key);
+      await prefs.remove(tsKey);
       return null;
     }
 
@@ -94,10 +117,18 @@ class CartRepositoryImpl implements CartRepository {
   }
 
   /// Clear cart cache
-  static Future<void> clearCartCache() async {
+  /// Clear cart cache for optional [userId]. If [userId] is null, clears
+  /// the global cache key.
+  static Future<void> clearCartCache({String? userId}) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_cartCacheKey);
-    await prefs.remove(_cartTimestampKey);
+    final key = userId == null
+        ? _cartCacheKeyBase
+        : '${_cartCacheKeyBase}_$userId';
+    final tsKey = userId == null
+        ? _cartTimestampKeyBase
+        : '${_cartTimestampKeyBase}_$userId';
+    await prefs.remove(key);
+    await prefs.remove(tsKey);
   }
 }
 
@@ -111,4 +142,3 @@ extension CartResponseToMap on CartResponse {
     };
   }
 }
-

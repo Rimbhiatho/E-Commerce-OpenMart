@@ -30,12 +30,13 @@ class CartProvider extends ChangeNotifier {
     }
     return total;
   }
+
   bool get isLoading => _isLoading;
   String? get error => _error;
   bool get isConnected => _isConnected;
 
   CartProvider({CartApiService? cartApiService})
-      : cartApiService = cartApiService ?? CartApiService.instance;
+    : cartApiService = cartApiService ?? CartApiService.instance;
 
   /// Add product to cart (local + sync to server)
   Future<void> addToCart(ProductModel product, {String? token}) async {
@@ -160,6 +161,13 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
+  /// Clear cache for a specific user (e.g., when switching accounts)
+  Future<void> clearCacheForUser(String? userId) async {
+    if (userId != null) {
+      await CartRepositoryImpl.clearCartCache(userId: userId);
+    }
+  }
+
   /// Load cart from server (called after login)
   Future<void> loadCartFromServer(String token) async {
     _isLoading = true;
@@ -182,10 +190,7 @@ class CartProvider extends ChangeNotifier {
           image: serverItem.imageUrl,
         );
 
-        _items.add(CartItem(
-          product: product,
-          quantity: serverItem.quantity,
-        ));
+        _items.add(CartItem(product: product, quantity: serverItem.quantity));
       }
 
       _isConnected = true;
@@ -198,9 +203,12 @@ class CartProvider extends ChangeNotifier {
     }
   }
 
-  /// Load cart from local cache (fallback when offline)
-  Future<void> loadCartFromCache() async {
-    final cachedCart = await CartRepositoryImpl.getCartFromCache();
+  /// Load cart from local cache (fallback when offline).
+  /// If [userId] is provided, loads the cache for that user.
+  Future<void> loadCartFromCache({String? userId}) async {
+    final cachedCart = await CartRepositoryImpl.getCartFromCache(
+      userId: userId,
+    );
     if (cachedCart != null) {
       _items.clear();
       for (final serverItem in cachedCart.items) {
@@ -213,10 +221,7 @@ class CartProvider extends ChangeNotifier {
           image: serverItem.imageUrl,
         );
 
-        _items.add(CartItem(
-          product: product,
-          quantity: serverItem.quantity,
-        ));
+        _items.add(CartItem(product: product, quantity: serverItem.quantity));
       }
       _isConnected = false; // From cache, not server
       notifyListeners();
@@ -229,13 +234,14 @@ class CartProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Save current cart to local cache
-  Future<void> saveToCache() async {
+  /// Save current cart to local cache. Optionally provide [userId] to scope
+  /// the cache to a specific user.
+  Future<void> saveToCache({String? userId}) async {
     final cartResponse = CartResponse(
       items: _items.map((item) {
         return CartItemModel(
           id: '',
-          userId: '',
+          userId: userId ?? '',
           productId: item.product.id.toString(),
           title: item.product.title,
           imageUrl: item.product.image,
@@ -248,7 +254,7 @@ class CartProvider extends ChangeNotifier {
       itemCount: _items.length,
       totalPrice: totalPrice,
     );
-    await CartRepositoryImpl.saveCartToCache(cartResponse);
+    await CartRepositoryImpl.saveCartToCache(cartResponse, userId: userId);
   }
 
   /// Clear any error state
@@ -266,9 +272,17 @@ class CartProvider extends ChangeNotifier {
   int getQuantity(int productId) {
     final item = _items.firstWhere(
       (item) => item.product.id == productId,
-      orElse: () => CartItem(product: ProductModel(id: 0, title: '', description: '', price: 0, category: '', image: '')),
+      orElse: () => CartItem(
+        product: ProductModel(
+          id: 0,
+          title: '',
+          description: '',
+          price: 0,
+          category: '',
+          image: '',
+        ),
+      ),
     );
     return item.quantity;
   }
 }
-

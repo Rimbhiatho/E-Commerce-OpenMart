@@ -50,12 +50,34 @@ class _LoginPageState extends State<LoginPage> {
 
     if (mounted) {
       if (success) {
-        // Load cart from server after successful login
+        // Get user ID and token after successful login
         final token = authProvider.token;
+        final userId = authProvider.user?.id;
+
+        print('DEBUG LOGIN: token=$token, userId=$userId');
+
+        // Clear local cart memory
+        await cartProvider.clearCart();
+
+        // Try to load from server first
         if (token != null) {
           await cartProvider.loadCartFromServer(token);
+          print(
+            'DEBUG LOGIN: Loaded from server, items=${cartProvider.itemCount}',
+          );
         }
-        
+
+        // Fallback: Load from cache if cart is empty
+        if (cartProvider.itemCount == 0 && userId != null) {
+          print(
+            'DEBUG LOGIN: Cart empty, loading from cache for userId=$userId',
+          );
+          await cartProvider.loadCartFromCache(userId: userId);
+          print(
+            'DEBUG LOGIN: Loaded from cache, items=${cartProvider.itemCount}',
+          );
+        }
+
         // Navigate to home on successful login
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const CustomerHome()),
