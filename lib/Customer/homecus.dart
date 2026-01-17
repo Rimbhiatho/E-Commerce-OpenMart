@@ -30,8 +30,6 @@ class _CustomerHomeState extends State<CustomerHome> {
   String _selectedCategory = 'All';
   List<String> _categories = [];
 
-  late final List<Widget> _pages;
-
   @override
   void initState() {
     super.initState();
@@ -41,13 +39,14 @@ class _CustomerHomeState extends State<CustomerHome> {
     useCase = GetProductsUseCase(repository);
     futureProducts = useCase.execute();
     _searchController.addListener(_onSearchChanged);
-    _pages = [
-      _homePage(),
-      const KeranjangPage(),
-      const HistoryPage(),
-      const ProfilePage(),
-    ];
   }
+
+  List<Widget> get _pages => [
+    _homePage(),
+    const KeranjangPage(),
+    const HistoryPage(),
+    const ProfilePage(),
+  ];
 
   void _onSearchChanged() {
     setState(() {
@@ -71,10 +70,8 @@ class _CustomerHomeState extends State<CustomerHome> {
     final authProvider = context.read<AuthProvider>();
     final cartProvider = context.read<CartProvider>();
 
-    // Save cart to cache before logout (per-user)
     await cartProvider.saveToCache(userId: authProvider.user?.id);
 
-    // Clear cart from memory
     await cartProvider.clearCart();
 
     await authProvider.logout();
@@ -114,15 +111,23 @@ class _CustomerHomeState extends State<CustomerHome> {
           return const Center(child: Text('No products available'));
         } else {
           final products = snapshot.data!;
-          _categories = products.map((p) => p.category).toSet().toList();
-          final filteredProducts = products
-              .where(
-                (product) =>
-                    product.title.toLowerCase().contains(_searchQuery) &&
-                    (_selectedCategory == 'All' ||
-                        product.category == _selectedCategory),
-              )
+          // Normalize categories: trim, remove empties, unique and sort for stable order
+          _categories = products
+              .map((p) => p.category.trim())
+              .where((c) => c.isNotEmpty)
+              .toSet()
               .toList();
+          _categories.sort();
+
+          final filteredProducts = products.where((product) {
+            final titleMatch = product.title.toLowerCase().contains(
+              _searchQuery,
+            );
+            final prodCategory = product.category.trim();
+            final categoryMatch =
+                _selectedCategory == 'All' || prodCategory == _selectedCategory;
+            return titleMatch && categoryMatch;
+          }).toList();
           return Column(
             children: [
               searchBar(),
@@ -141,7 +146,6 @@ class _CustomerHomeState extends State<CustomerHome> {
                     final product = filteredProducts[index];
                     return GestureDetector(
                       onTap: () {
-                        // Add to cart when an item is tapped
                         context.read<CartProvider>().addToCart(product);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -188,7 +192,17 @@ class _CustomerHomeState extends State<CustomerHome> {
           hintText: 'Search products',
           prefixIcon: Icon(Icons.search),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(8.0)),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                  },
+                )
+              : null,
         ),
+        textInputAction: TextInputAction.search,
+        onSubmitted: (_) => setState(() {}),
       ),
     );
   }
@@ -208,7 +222,8 @@ class _CustomerHomeState extends State<CustomerHome> {
             child: FilterChip(
               label: Text(category),
               selected: isSelected,
-              onSelected: (_) => _onCategorySelected(category),
+              onSelected: (selected) =>
+                  _onCategorySelected(selected ? category : 'All'),
             ),
           );
         },
