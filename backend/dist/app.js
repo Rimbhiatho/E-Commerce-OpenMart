@@ -9,39 +9,47 @@ import { setupProductRoutes } from './presentation/routes/productRoutes';
 import { setupCategoryRoutes } from './presentation/routes/categoryRoutes';
 import { setupOrderRoutes } from './presentation/routes/orderRoutes';
 import { setupInventoryRoutes } from './presentation/routes/inventoryRoutes';
+import { setupWalletRoutes } from './presentation/routes/walletRoutes';
+import { setupCartRoutes } from './presentation/routes/cartRoutes';
 // Import controllers
 import { AuthController } from './presentation/controllers/AuthController';
 import { ProductController } from './presentation/controllers/ProductController';
 import { CategoryController } from './presentation/controllers/CategoryController';
 import { OrderController } from './presentation/controllers/OrderController';
 import { InventoryController } from './presentation/controllers/InventoryController';
+import { WalletController } from './presentation/controllers/WalletController';
+import { CartController } from './presentation/controllers/CartController';
 // Import use cases
 import { AuthUseCase } from './domain/useCases/AuthUseCase';
 import { ProductUseCase } from './domain/useCases/ProductUseCase';
 import { CategoryUseCase } from './domain/useCases/CategoryUseCase';
 import { OrderUseCase } from './domain/useCases/OrderUseCase';
 import { InventoryUseCase } from './domain/useCases/InventoryUseCase';
+import { WalletUseCase } from './domain/useCases/WalletUseCase';
 // Import repositories
 import { userRepository } from './infrastructure/repositories/UserRepositoryImpl';
 import { productRepository } from './infrastructure/repositories/ProductRepositoryImpl';
 import { categoryRepository } from './infrastructure/repositories/CategoryRepositoryImpl';
 import { orderRepository } from './infrastructure/repositories/OrderRepositoryImpl';
+import { walletRepository } from './infrastructure/repositories/WalletRepositoryImpl';
+import { cartRepository } from './infrastructure/repositories/CartRepositoryImpl';
 dotenv.config();
 export function createApp() {
     const app = express();
     const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
-    const port = process.env.PORT || 3000;
-    // Middleware
+    // Port diambil di main.ts, tapi bisa didefinisikan default di sini jika perlu
+    // Middleware Global
     app.use(helmet());
     app.use(cors());
     app.use(morgan('dev'));
     app.use(express.json());
     app.use(express.urlencoded({ extended: true }));
     // Initialize use cases
-    const authUseCase = new AuthUseCase(userRepository, jwtSecret);
+    const authUseCase = new AuthUseCase(userRepository, walletRepository, jwtSecret);
     const productUseCase = new ProductUseCase(productRepository);
     const categoryUseCase = new CategoryUseCase(categoryRepository);
-    const orderUseCase = new OrderUseCase(orderRepository, productRepository, userRepository);
+    const walletUseCase = new WalletUseCase(walletRepository);
+    const orderUseCase = new OrderUseCase(orderRepository, productRepository, userRepository, walletRepository);
     const inventoryUseCase = new InventoryUseCase(productRepository);
     // Initialize controllers
     const authController = new AuthController(authUseCase);
@@ -49,18 +57,30 @@ export function createApp() {
     const categoryController = new CategoryController(categoryUseCase);
     const orderController = new OrderController(orderUseCase);
     const inventoryController = new InventoryController(inventoryUseCase);
+    const walletController = new WalletController(walletUseCase);
+    const cartController = new CartController(cartRepository);
     // Health check
     app.get('/health', (req, res) => {
         res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
+    // --- [START] DEBUGGING MIDDLEWARE (CCTV) ---
+    // Kode ini akan mencatat setiap request yang masuk ke terminal
+    app.use((req, res, next) => {
+        console.log(`[DEBUG LOG] Method: ${req.method} | URL: ${req.url}`);
+        next(); // Lanjut ke route berikutnya
+    });
+    // --- [END] DEBUGGING MIDDLEWARE ---
     // API routes
     app.use('/api/auth', setupAuthRoutes(authController, jwtSecret));
     app.use('/api/products', setupProductRoutes(productController, jwtSecret));
     app.use('/api/categories', setupCategoryRoutes(categoryController, jwtSecret));
     app.use('/api/orders', setupOrderRoutes(orderController, jwtSecret));
     app.use('/api/inventory', setupInventoryRoutes(inventoryController, jwtSecret));
-    // 404 handler
+    app.use('/api/wallet', setupWalletRoutes(walletController, jwtSecret));
+    app.use('/api/cart', setupCartRoutes(cartController, jwtSecret));
+    // 404 handler (Jika route tidak ditemukan di atas)
     app.use((req, res) => {
+        console.log(`[DEBUG LOG] Route Not Found: ${req.url}`); // Tambahan log untuk 404
         res.status(404).json({
             success: false,
             message: 'Route not found'

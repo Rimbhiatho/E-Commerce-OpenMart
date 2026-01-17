@@ -1,7 +1,6 @@
 import { Category, CreateCategoryDTO, UpdateCategoryDTO, CategoryResponse } from '../../domain/entities/Category';
 import { CategoryRepository } from '../../domain/repositories/CategoryRepository';
 export declare class CategoryRepositoryImpl implements CategoryRepository {
-    private db;
     findById(id: string): Promise<Category | null>;
     findAll(): Promise<Category[]>;
     findActive(): Promise<Category[]>;

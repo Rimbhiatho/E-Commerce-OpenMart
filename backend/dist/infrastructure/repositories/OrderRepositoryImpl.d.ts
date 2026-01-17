@@ -1,7 +1,6 @@
 import { Order, CreateOrderDTO, UpdateOrderStatusDTO, UpdatePaymentStatusDTO, OrderFilter, OrderResponse, OrderStatus } from '../../domain/entities/Order';
 import { OrderRepository } from '../../domain/repositories/OrderRepository';
 export declare class OrderRepositoryImpl implements OrderRepository {
-    private db;
     findById(id: string): Promise<Order | null>;
     findAll(filter?: OrderFilter): Promise<Order[]>;
     findByUser(userId: string): Promise<Order[]>;

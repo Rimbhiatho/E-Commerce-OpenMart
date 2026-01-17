@@ -1,7 +1,6 @@
 import { User, CreateUserDTO, UserResponse } from '../../domain/entities/User';
 import { UserRepository } from '../../domain/repositories/UserRepository';
 export declare class UserRepositoryImpl implements UserRepository {
-    private db;
     findById(id: string): Promise<User | null>;
     findByEmail(email: string): Promise<User | null>;
     findAll(): Promise<User[]>;

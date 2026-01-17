@@ -15,12 +15,28 @@ const seedData = async () => {
             const hashedPassword = await bcrypt.hash('admin123', 10);
             const adminId = uuidv4();
             const now = new Date().toISOString();
-            await db.run(`INSERT INTO users (id, email, password, name, role, createdAt, updatedAt) 
-         VALUES (?, ?, ?, ?, ?, ?, ?)`, [adminId, adminEmail, hashedPassword, 'Admin OpenMart', 'admin', now, now]);
-            console.log('✅ Admin user created');
+            await db.run(`INSERT INTO users (id, email, password, name, role, balance, createdAt, updatedAt) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [adminId, adminEmail, hashedPassword, 'Admin OpenMart', 'admin', 100000000, now, now]);
+            console.log('✅ Admin user created with 100 juta wallet balance');
         }
         else {
-            console.log('ℹ️ Admin user already exists');
+            console.log('ℹ️ Admin user already exists, updating balance to 100 juta...');
+            await db.run('UPDATE users SET balance = ?, updatedAt = ? WHERE email = ?', [100000000, new Date().toISOString(), adminEmail]);
+        }
+        // --- SEED CUSTOMER USER ---
+        const customerEmail = 'customer@openmart.com';
+        const existingCustomer = await db.get("SELECT * FROM users WHERE email = ?", [customerEmail]);
+        if (!existingCustomer) {
+            const hashedPassword = await bcrypt.hash('customer123', 10);
+            const customerId = uuidv4();
+            const now = new Date().toISOString();
+            await db.run(`INSERT INTO users (id, email, password, name, role, balance, createdAt, updatedAt) 
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [customerId, customerEmail, hashedPassword, 'Customer OpenMart', 'customer', 100000000, now, now]);
+            console.log('✅ Customer user created with 100 juta wallet balance');
+        }
+        else {
+            console.log('ℹ️ Customer user already exists, updating balance to 100 juta...');
+            await db.run('UPDATE users SET balance = ?, updatedAt = ? WHERE email = ?', [100000000, new Date().toISOString(), customerEmail]);
         }
         // --- SEED CATEGORIES (Contoh) ---
         const categories = [

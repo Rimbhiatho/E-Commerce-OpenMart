@@ -1,8 +1,9 @@
 import bcrypt from 'bcryptjs';
 import * as jwt from 'jsonwebtoken';
 export class AuthUseCase {
-    constructor(userRepository, jwtSecret, jwtExpiresIn = '24h') {
+    constructor(userRepository, walletRepository, jwtSecret, jwtExpiresIn = '24h') {
         this.userRepository = userRepository;
+        this.walletRepository = walletRepository;
         this.jwtSecret = jwtSecret;
         this.jwtExpiresIn = jwtExpiresIn;
     }
@@ -17,6 +18,8 @@ export class AuthUseCase {
             password: hashedPassword,
             role: dto.role || 'customer'
         });
+        // Initialize wallet balance for new user
+        await this.walletRepository.initializeBalance(user.id);
         const token = this.generateToken(user);
         return {
             user: this.userRepository.toResponse(user),

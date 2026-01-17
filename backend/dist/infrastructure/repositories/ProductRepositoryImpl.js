@@ -1,31 +1,16 @@
 import { getDatabase } from '../database/database';
 import { v4 as uuidv4 } from 'uuid';
 export class ProductRepositoryImpl {
-    constructor() {
-        this.db = getDatabase();
-    }
     async findById(id) {
-        const database = await this.db;
-        return new Promise((resolve, reject) => {
-            database.get(`SELECT p.*, c.name as categoryName 
-         FROM products p 
-         LEFT JOIN categories c ON p.categoryId = c.id 
-         WHERE p.id = ?`, [id], (err, row) => {
-                if (err)
-                    reject(err);
-                else {
-                    if (row) {
-                        resolve(this.mapRowToProduct(row));
-                    }
-                    else {
-                        resolve(null);
-                    }
-                }
-            });
-        });
+        const db = await getDatabase();
+        const row = await db.get(`SELECT p.*, c.name as categoryName 
+       FROM products p 
+       LEFT JOIN categories c ON p.categoryId = c.id 
+       WHERE p.id = ?`, [id]);
+        return row ? this.mapRowToProduct(row) : null;
     }
     async findAll(filter) {
-        const database = await this.db;
+        const db = await getDatabase();
         let query = `SELECT p.*, c.name as categoryName FROM products p LEFT JOIN categories c ON p.categoryId = c.id WHERE 1=1`;
         const params = [];
         if (filter?.categoryId) {
@@ -49,60 +34,39 @@ export class ProductRepositoryImpl {
             params.push(`%${filter.search}%`, `%${filter.search}%`);
         }
         query += ' ORDER BY p.name ASC';
-        return new Promise((resolve, reject) => {
-            database.all(query, params, (err, rows) => {
-                if (err)
-                    reject(err);
-                else {
-                    resolve(rows.map(row => this.mapRowToProduct(row)));
-                }
-            });
-        });
+        const rows = await db.all(query, params);
+        return rows.map((row) => this.mapRowToProduct(row));
     }
     async findByCategory(categoryId) {
-        const database = await this.db;
-        return new Promise((resolve, reject) => {
-            database.all(`SELECT p.*, c.name as categoryName 
-         FROM products p 
-         LEFT JOIN categories c ON p.categoryId = c.id 
-         WHERE p.categoryId = ? 
-         ORDER BY p.name ASC`, [categoryId], (err, rows) => {
-                if (err)
-                    reject(err);
-                else {
-                    resolve(rows.map(row => this.mapRowToProduct(row)));
-                }
-            });
-        });
+        const db = await getDatabase();
+        const rows = await db.all(`SELECT p.*, c.name as categoryName 
+       FROM products p 
+       LEFT JOIN categories c ON p.categoryId = c.id 
+       WHERE p.categoryId = ? 
+       ORDER BY p.name ASC`, [categoryId]);
+        return rows.map((row) => this.mapRowToProduct(row));
     }
     async create(dto) {
-        const database = await this.db;
+        const db = await getDatabase();
         const id = uuidv4();
         const now = new Date().toISOString();
-        return new Promise((resolve, reject) => {
-            database.run(`INSERT INTO products (id, name, description, price, stock, categoryId, imageUrl, isActive, createdAt, updatedAt)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [id, dto.name, dto.description, dto.price, dto.stock, dto.categoryId, dto.imageUrl, 1, now, now], (err) => {
-                if (err)
-                    reject(err);
-                else {
-                    resolve({
-                        id,
-                        name: dto.name,
-                        description: dto.description,
-                        price: dto.price,
-                        stock: dto.stock,
-                        categoryId: dto.categoryId,
-                        imageUrl: dto.imageUrl,
-                        isActive: true,
-                        createdAt: new Date(now),
-                        updatedAt: new Date(now)
-                    });
-                }
-            });
-        });
+        await db.run(`INSERT INTO products (id, name, description, price, stock, categoryId, imageUrl, isActive, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [id, dto.name, dto.description, dto.price, dto.stock, dto.categoryId, dto.imageUrl, 1, now, now]);
+        return {
+            id,
+            name: dto.name,
+            description: dto.description,
+            price: dto.price,
+            stock: dto.stock,
+            categoryId: dto.categoryId,
+            imageUrl: dto.imageUrl,
+            isActive: true,
+            createdAt: new Date(now),
+            updatedAt: new Date(now)
+        };
     }
     async update(id, data) {
-        const database = await this.db;
+        const db = await getDatabase();
         const now = new Date().toISOString();
         const updates = [];
         const values = [];
@@ -135,45 +99,24 @@ export class ProductRepositoryImpl {
             values.push(data.isActive ? 1 : 0);
         }
         if (updates.length === 0) {
-            return this.findById(id);
+            return (await this.findById(id));
         }
         updates.push('updatedAt = ?');
         values.push(now);
         values.push(id);
-        return new Promise((resolve, reject) => {
-            database.run(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, values, (err) => {
-                if (err)
-                    reject(err);
-                else {
-                    resolve(this.findById(id));
-                }
-            });
-        });
+        await db.run(`UPDATE products SET ${updates.join(', ')} WHERE id = ?`, values);
+        return (await this.findById(id));
     }
     async delete(id) {
-        const database = await this.db;
-        return new Promise((resolve, reject) => {
-            database.run('DELETE FROM products WHERE id = ?', [id], (err) => {
-                if (err)
-                    reject(err);
-                else {
-                    resolve(true);
-                }
-            });
-        });
+        const db = await getDatabase();
+        await db.run('DELETE FROM products WHERE id = ?', [id]);
+        return true;
     }
     async updateStock(id, quantity) {
-        const database = await this.db;
+        const db = await getDatabase();
         const now = new Date().toISOString();
-        return new Promise((resolve, reject) => {
-            database.run('UPDATE products SET stock = ?, updatedAt = ? WHERE id = ?', [quantity, now, id], (err) => {
-                if (err)
-                    reject(err);
-                else {
-                    resolve(this.findById(id));
-                }
-            });
-        });
+        await db.run('UPDATE products SET stock = ?, updatedAt = ? WHERE id = ?', [quantity, now, id]);
+        return (await this.findById(id));
     }
     toResponse(product) {
         return {

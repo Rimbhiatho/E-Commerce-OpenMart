@@ -173,8 +173,8 @@ export const createOrderValidation: ValidationChain[] = [
     .isArray({ min: 1 })
     .withMessage('Order must contain at least one item'),
   body('items.*.productId')
-    .isUUID()
-    .withMessage('Product ID must be a valid UUID'),
+    .notEmpty()
+    .withMessage('Product ID is required'),
   body('items.*.quantity')
     .isInt({ min: 1 })
     .withMessage('Quantity must be at least 1'),

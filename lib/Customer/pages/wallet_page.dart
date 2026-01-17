@@ -5,16 +5,14 @@ import 'package:http/http.dart' as http;
 import 'package:openmart/presentation/controllers/wallet_provider.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/presentation/controllers/cart_provider.dart';
+import 'package:openmart/Customer/pages/transaksi.dart';
 
 /// WalletCheckoutPage - Halaman pembayaran dengan wallet
 /// Muncul setelah user klik tombol "Beli" di keranjang
 class WalletCheckoutPage extends StatefulWidget {
   final double totalAmount;
 
-  const WalletCheckoutPage({
-    super.key,
-    required this.totalAmount,
-  });
+  const WalletCheckoutPage({super.key, required this.totalAmount});
 
   @override
   State<WalletCheckoutPage> createState() => _WalletCheckoutPageState();
@@ -82,7 +80,8 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
     // Validasi saldo
     if (!walletProvider.hasSufficientBalance(widget.totalAmount)) {
       setState(() {
-        _errorMessage = 'Saldo tidak mencukupi!\n'
+        _errorMessage =
+            'Saldo tidak mencukupi!\n'
             'Diperlukan: Rp ${widget.totalAmount.toStringAsFixed(2)}\n'
             'Saldo tersedia: ${walletProvider.getFormattedBalance()}';
       });
@@ -110,23 +109,35 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
         // Payment successful
         await cartProvider.clearCart(token: token);
         await walletProvider.refreshBalance(token);
+        await walletProvider.loadTransactions(token);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Pembayaran berhasil! Saldo wallet telah dikurangi.'),
+              content: const Text(
+                'Pembayaran berhasil! Saldo wallet telah dikurangi.',
+              ),
               backgroundColor: Colors.green,
             ),
           );
 
-          // Navigate back to cart with success flag
-          Navigator.of(context).pop(true);
+          // Navigate to transaction history
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const HistoryPage()),
+          );
         }
       } else {
         setState(() {
-          _errorMessage = orderResponse?['message'] ?? 'Pembayaran gagal. Silakan coba lagi.';
+          _errorMessage =
+              orderResponse?['message'] ??
+              'Pembayaran gagal. Silakan coba lagi.';
           _isProcessing = false;
         });
+        // Debug: Print error details
+        if (orderResponse?['errors'] != null) {
+          print('Validation errors: ${orderResponse?['errors']}');
+        }
+        print('Full response: $orderResponse');
       }
     } catch (e) {
       setState(() {
@@ -140,24 +151,43 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
     String token,
     CartProvider cartProvider,
   ) async {
+    final authProvider = context.read<AuthProvider>();
+    final userId = authProvider.user?.id;
+
+    if (userId == null) {
+      throw Exception('User ID not found');
+    }
+
+    // Build items list
+    final List<Map<String, dynamic>> items = [];
+    for (var item in cartProvider.items) {
+      items.add({
+        'productId': item.product.id.toString(),
+        'quantity': item.quantity,
+      });
+    }
+
+    final requestBody = {
+      'userId': userId,
+      'items': items,
+      'shippingAddress': 'Default Address',
+      'paymentMethod': 'wallet',
+      'notes': 'Pembayaran via Wallet',
+    };
+
+    print('Request body: ${jsonEncode(requestBody)}');
+
     final response = await http.post(
       Uri.parse('http://10.0.2.2:3000/api/orders'),
       headers: {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer $token',
       },
-      body: jsonEncode({
-        'items': cartProvider.items.map((item) {
-          return {
-            'productId': item.product.id.toString(),
-            'quantity': item.quantity,
-          };
-        }).toList(),
-        'shippingAddress': 'Default Address', // Should come from user input
-        'paymentMethod': 'wallet',
-        'notes': 'Pembayaran via Wallet',
-      }),
+      body: jsonEncode(requestBody),
     );
+
+    print('Response status: ${response.statusCode}');
+    print('Response body: ${response.body}');
 
     return json.decode(response.body) as Map<String, dynamic>;
   }
@@ -178,16 +208,11 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(
-                color: Colors.green,
-              ),
+              CircularProgressIndicator(color: Colors.green),
               const SizedBox(height: 16),
               Text(
                 'Memuat data wallet...',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[700],
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey[700]),
               ),
             ],
           ),
@@ -298,10 +323,7 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
                         const Expanded(
                           child: Text(
                             'Saldo Wallet Anda',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
                           ),
                         ),
                       ],
@@ -323,7 +345,9 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            canPay ? 'Saldo cukup untuk pembayaran' : 'Saldo tidak mencukupi',
+                            canPay
+                                ? 'Saldo cukup untuk pembayaran'
+                                : 'Saldo tidak mencukupi',
                             style: TextStyle(
                               color: canPay ? Colors.green : Colors.red,
                               fontWeight: FontWeight.w500,
@@ -358,39 +382,41 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
                     ),
                     const Divider(),
                     const SizedBox(height: 8),
-                    ...cartProvider.items.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  item.product.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  '${item.quantity} x Rp ${item.product.price.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
+                    ...cartProvider.items.map(
+                      (item) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.product.title,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                              ],
+                                  Text(
+                                    '${item.quantity} x Rp ${item.product.price.toStringAsFixed(2)}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                          Text(
-                            'Rp ${item.total.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
+                            Text(
+                              'Rp ${item.total.toStringAsFixed(2)}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    )),
+                    ),
                     const Divider(),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -426,7 +452,9 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                color: canPay ? Colors.green.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1),
+                color: canPay
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.red.withValues(alpha: 0.1),
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: Row(
@@ -491,7 +519,8 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: (walletProvider.isLoading || _isProcessing || !canPay)
+                onPressed:
+                    (walletProvider.isLoading || _isProcessing || !canPay)
                     ? null
                     : _processPayment,
                 child: _isProcessing
@@ -547,4 +576,3 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
     );
   }
 }
-

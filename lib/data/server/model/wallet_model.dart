@@ -4,15 +4,13 @@ class WalletModel {
   final double balance;
   final List<WalletTransaction> transactions;
 
-  WalletModel({
-    required this.balance,
-    this.transactions = const [],
-  });
+  WalletModel({required this.balance, this.transactions = const []});
 
   factory WalletModel.fromJson(Map<String, dynamic> json) {
     return WalletModel(
       balance: (json['balance'] ?? 0).toDouble(),
-      transactions: (json['transactions'] as List<dynamic>?)
+      transactions:
+          (json['transactions'] as List<dynamic>?)
               ?.map((e) => WalletTransaction.fromJson(e))
               .toList() ??
           [],
@@ -84,10 +82,7 @@ class TopUpRequest {
   TopUpRequest({required this.amount, this.description});
 
   Map<String, dynamic> toJson() {
-    return {
-      'amount': amount,
-      'description': description,
-    };
+    return {'amount': amount, 'description': description};
   }
 }
 
@@ -97,9 +92,6 @@ class WalletBalanceResponse {
   WalletBalanceResponse({required this.balance});
 
   factory WalletBalanceResponse.fromJson(Map<String, dynamic> json) {
-    return WalletBalanceResponse(
-      balance: (json['balance'] ?? 0).toDouble(),
-    );
+    return WalletBalanceResponse(balance: (json['balance'] ?? 0).toDouble());
   }
 }
-

@@ -4,6 +4,7 @@ export interface User {
     password: string;
     name: string;
     role: 'customer' | 'admin';
+    balance: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -19,6 +20,7 @@ export interface CreateUserDTO {
     password: string;
     name: string;
     role?: 'customer' | 'admin';
+    balance?: number;
 }
 export interface LoginDTO {
     email: string;
@@ -27,5 +29,27 @@ export interface LoginDTO {
 export interface AuthResponse {
     user: UserResponse;
     token: string;
+}
+export interface WalletTransaction {
+    id: string;
+    userId: string;
+    type: 'credit' | 'debit';
+    amount: number;
+    balanceBefore: number;
+    balanceAfter: number;
+    description: string;
+    createdAt: Date;
+}
+export interface TopUpDTO {
+    amount: number;
+    description?: string;
+}
+export interface WalletResponse {
+    balance: number;
+    transactions: WalletTransaction[];
+}
+export interface BalanceUpdateDTO {
+    amount: number;
+    description?: string;
 }
 //# sourceMappingURL=User.d.ts.map

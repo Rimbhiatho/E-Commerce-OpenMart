@@ -22,7 +22,7 @@ class WalletProvider with ChangeNotifier {
   bool get hasEnoughBalance => _balance > 0;
 
   WalletProvider({WalletApiService? walletApiService})
-      : walletApiService = walletApiService ?? WalletApiService.instance;
+    : walletApiService = walletApiService ?? WalletApiService.instance;
 
   /// Initialize wallet data by fetching balance and transactions
   Future<void> initializeWallet(String token) async {
@@ -132,4 +132,3 @@ class WalletProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-

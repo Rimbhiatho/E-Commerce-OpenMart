@@ -1,7 +1,6 @@
 import { Product, CreateProductDTO, UpdateProductDTO, ProductFilter, ProductResponse } from '../../domain/entities/Product';
 import { ProductRepository } from '../../domain/repositories/ProductRepository';
 export declare class ProductRepositoryImpl implements ProductRepository {
-    private db;
     findById(id: string): Promise<Product | null>;
     findAll(filter?: ProductFilter): Promise<Product[]>;
     findByCategory(categoryId: string): Promise<Product[]>;

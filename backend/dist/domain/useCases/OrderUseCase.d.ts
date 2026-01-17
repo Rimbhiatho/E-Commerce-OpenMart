@@ -1,12 +1,14 @@
 import { OrderRepository } from '../repositories/OrderRepository';
 import { ProductRepository } from '../repositories/ProductRepository';
 import { UserRepository } from '../repositories/UserRepository';
+import { WalletRepository } from '../repositories/WalletRepository';
 import { CreateOrderDTO, UpdateOrderStatusDTO, UpdatePaymentStatusDTO, OrderFilter, Order, OrderStatus } from '../entities/Order';
 export declare class OrderUseCase {
     private orderRepository;
     private productRepository;
     private userRepository;
-    constructor(orderRepository: OrderRepository, productRepository: ProductRepository, userRepository: UserRepository);
+    private walletRepository;
+    constructor(orderRepository: OrderRepository, productRepository: ProductRepository, userRepository: UserRepository, walletRepository: WalletRepository);
     createOrder(dto: CreateOrderDTO): Promise<Order>;
     getAllOrders(filter?: OrderFilter): Promise<Order[]>;
     getOrderById(id: string): Promise<Order | null>;

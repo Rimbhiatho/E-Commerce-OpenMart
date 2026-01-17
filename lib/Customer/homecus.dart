@@ -10,7 +10,7 @@ import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/presentation/controllers/cart_provider.dart';
 import 'package:openmart/login_page.dart';
 import 'package:openmart/Customer/pages/keranjang.dart';
-import 'package:openmart/Customer/pages/history.dart';
+import 'package:openmart/Customer/pages/transaksi.dart';
 import 'package:openmart/Customer/pages/profil.dart';
 
 class CustomerHome extends StatefulWidget {
@@ -111,7 +111,6 @@ class _CustomerHomeState extends State<CustomerHome> {
           return const Center(child: Text('No products available'));
         } else {
           final products = snapshot.data!;
-          // Normalize categories: trim, remove empties, unique and sort for stable order
           _categories = products
               .map((p) => p.category.trim())
               .where((c) => c.isNotEmpty)
