@@ -5,7 +5,6 @@ import 'package:http/http.dart' as http;
 import 'package:openmart/presentation/controllers/wallet_provider.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/presentation/controllers/cart_provider.dart';
-import 'package:openmart/Customer/pages/transaksi.dart';
 
 /// WalletCheckoutPage - Halaman pembayaran dengan wallet
 /// Muncul setelah user klik tombol "Beli" di keranjang
@@ -121,10 +120,8 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
             ),
           );
 
-          // Navigate to transaction history
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => const HistoryPage()),
-          );
+          // Navigate back to Home (pop back to CustomerHome)
+          Navigator.of(context).pop(true);
         }
       } else {
         setState(() {

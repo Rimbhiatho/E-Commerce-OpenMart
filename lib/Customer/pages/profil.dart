@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'dart:async';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -14,6 +17,34 @@ class ProfilePage extends StatefulWidget {
 class _ProfilePageState extends State<ProfilePage> {
   File? _profileImage;
   final ImagePicker _imagePicker = ImagePicker();
+  bool _isLoadingImage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileImage();
+  }
+
+  Future<void> _loadProfileImage() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final imagePath = prefs.getString('profile_image_path');
+
+      if (imagePath != null && imagePath.isNotEmpty) {
+        final file = File(imagePath);
+        if (await file.exists()) {
+          setState(() {
+            _profileImage = file;
+          });
+        } else {
+          // File tidak ada, hapus dari preferences
+          await prefs.remove('profile_image_path');
+        }
+      }
+    } catch (e) {
+      print('Error loading profile image: $e');
+    }
+  }
 
   Future<void> _pickImageFromCamera() async {
     try {
@@ -23,10 +54,97 @@ class _ProfilePageState extends State<ProfilePage> {
 
       if (image != null) {
         setState(() {
-          _profileImage = File(image.path);
+          _isLoadingImage = true;
         });
+
+        // Save image to app documents directory
+        final appDir = await getApplicationDocumentsDirectory();
+        final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final savedImage = await File(
+          image.path,
+        ).copy('${appDir.path}/$fileName');
+
+        // Save path to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('profile_image_path', savedImage.path);
+
+        setState(() {
+          _profileImage = savedImage;
+          _isLoadingImage = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Foto profil berhasil disimpan'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
       }
     } catch (e) {
+      setState(() {
+        _isLoadingImage = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Future<void> _pickImageFromGallery() async {
+    try {
+      final XFile? image = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+      );
+
+      if (image != null) {
+        setState(() {
+          _isLoadingImage = true;
+        });
+
+        // Save image to app documents directory
+        final appDir = await getApplicationDocumentsDirectory();
+        final fileName = 'profile_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final savedImage = await File(
+          image.path,
+        ).copy('${appDir.path}/$fileName');
+
+        // Delete old image if exists
+        if (_profileImage != null && await _profileImage!.exists()) {
+          try {
+            await _profileImage!.delete();
+          } catch (e) {
+            print('Error deleting old image: $e');
+          }
+        }
+
+        // Save path to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('profile_image_path', savedImage.path);
+
+        setState(() {
+          _profileImage = savedImage;
+          _isLoadingImage = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Foto profil berhasil disimpan'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _isLoadingImage = false;
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -74,17 +192,29 @@ class _ProfilePageState extends State<ProfilePage> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       FloatingActionButton.extended(
-                        onPressed: _pickImageFromCamera,
-                        heroTag: 'message',
+                        onPressed: _isLoadingImage
+                            ? null
+                            : _pickImageFromCamera,
+                        heroTag: 'camera',
                         elevation: 0,
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          123,
-                          118,
-                          118,
-                        ),
-                        label: const Text("Ganti foto profil"),
+                        backgroundColor: _isLoadingImage
+                            ? Colors.grey
+                            : const Color.fromARGB(255, 123, 118, 118),
+                        label: const Text("Kamera"),
                         icon: const Icon(Icons.camera_alt),
+                      ),
+                      const SizedBox(width: 16),
+                      FloatingActionButton.extended(
+                        onPressed: _isLoadingImage
+                            ? null
+                            : _pickImageFromGallery,
+                        heroTag: 'gallery',
+                        elevation: 0,
+                        backgroundColor: _isLoadingImage
+                            ? Colors.grey
+                            : const Color.fromARGB(255, 123, 118, 118),
+                        label: const Text("Galeri"),
+                        icon: const Icon(Icons.image),
                       ),
                     ],
                   ),

@@ -78,17 +78,21 @@ export class OrderRepositoryImpl implements OrderRepository {
     const db = await getDatabase();
     const id = uuidv4();
     const now = new Date().toISOString();
-    const items = JSON.stringify(dto.items);
-    
-    // Convert DTO items to OrderItem format
-    const orderItems: OrderItem[] = dto.items.map((item, index) => ({
-      id: `item-${index}`,
-      productId: item.productId,
-      productName: '',
-      quantity: item.quantity,
-      unitPrice: 0,
-      totalPrice: 0
-    }));
+    // Build order items using fields provided in DTO when available
+    const orderItems: OrderItem[] = dto.items.map((item: any, index: number) => {
+      const quantity = item.quantity ?? 1;
+      const unitPrice = (item.unitPrice ?? item.price ?? 0) as number;
+      const productName = (item.productName ?? item.name ?? '') as string;
+      return {
+        id: item.id ?? `item-${index}`,
+        productId: item.productId,
+        productName,
+        quantity,
+        unitPrice,
+        totalPrice: (item.totalPrice ?? (unitPrice * quantity)) as number
+      } as OrderItem;
+    });
+    const items = JSON.stringify(orderItems);
     
     await db.run(
       `INSERT INTO orders (id, userId, items, totalAmount, status, shippingAddress, paymentMethod, paymentStatus, notes, createdAt, updatedAt)
@@ -173,14 +177,19 @@ export class OrderRepositoryImpl implements OrderRepository {
     let items: OrderItem[] = [];
     try {
       const parsedItems = JSON.parse(row.items);
-      items = parsedItems.map((item: any, index: number) => ({
-        id: `item-${index}`,
-        productId: item.productId,
-        productName: '',
-        quantity: item.quantity,
-        unitPrice: 0,
-        totalPrice: 0
-      }));
+      items = parsedItems.map((item: any, index: number) => {
+        const quantity = item.quantity ?? 1;
+        const unitPrice = (item.unitPrice ?? item.price ?? 0) as number;
+        const productName = (item.productName ?? item.name ?? '') as string;
+        return {
+          id: item.id ?? `item-${index}`,
+          productId: item.productId,
+          productName,
+          quantity,
+          unitPrice,
+          totalPrice: (item.totalPrice ?? (unitPrice * quantity)) as number
+        } as OrderItem;
+      });
     } catch (e) {
       items = [];
     }
