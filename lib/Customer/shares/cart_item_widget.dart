@@ -106,14 +106,22 @@ class CartItemWidget extends StatelessWidget {
 }
 
 class CartPage extends StatelessWidget {
-  const CartPage({super.key});
+  final String? token;
+
+  const CartPage({super.key, this.token});
 
   @override
   Widget build(BuildContext context) {
+    final cartProvider = context.watch<CartProvider>();
+
     return Scaffold(
       appBar: AppBar(title: const Text('Keranjang')),
       body: Consumer<CartProvider>(
         builder: (context, cartProvider, child) {
+          if (cartProvider.isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
           if (cartProvider.items.isEmpty) {
             return const Center(child: Text('Keranjang kosong'));
           }
@@ -130,12 +138,16 @@ class CartPage extends StatelessWidget {
                     return CartItemWidget(
                       cartItem: cartItem,
                       onRemove: () {
-                        cartProvider.removeFromCart(product.id.toString());
+                        cartProvider.removeFromCart(
+                          product.id.toString(),
+                          token: token,
+                        );
                       },
                       onQuantityChanged: (newQuantity) {
                         cartProvider.updateQuantity(
                           product.id.toString(),
                           newQuantity,
+                          token: token,
                         );
                       },
                     );
@@ -177,13 +189,13 @@ class CartPage extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 12.0),
                           backgroundColor: Colors.green,
                         ),
-                        onPressed: () {
+                        onPressed: () async {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Pembelian berhasil!'),
                             ),
                           );
-                          cartProvider.clearCart();
+                          await cartProvider.clearCart(token: token);
                         },
                         child: const Text(
                           'Beli',
@@ -205,3 +217,4 @@ class CartPage extends StatelessWidget {
     );
   }
 }
+

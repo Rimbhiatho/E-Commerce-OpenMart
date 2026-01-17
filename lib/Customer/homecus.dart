@@ -69,6 +69,11 @@ class _CustomerHomeState extends State<CustomerHome> {
 
   Future<void> _handleLogout() async {
     final authProvider = context.read<AuthProvider>();
+    final cartProvider = context.read<CartProvider>();
+    
+    // Save cart to cache before logout
+    await cartProvider.saveToCache();
+    
     await authProvider.logout();
 
     if (mounted) {

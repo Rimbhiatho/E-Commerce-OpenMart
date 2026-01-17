@@ -11,6 +11,7 @@ import { setupCategoryRoutes } from './presentation/routes/categoryRoutes';
 import { setupOrderRoutes } from './presentation/routes/orderRoutes';
 import { setupInventoryRoutes } from './presentation/routes/inventoryRoutes';
 import { setupWalletRoutes } from './presentation/routes/walletRoutes';
+import { setupCartRoutes } from './presentation/routes/cartRoutes';
 
 // Import controllers
 import { AuthController } from './presentation/controllers/AuthController';
@@ -19,6 +20,7 @@ import { CategoryController } from './presentation/controllers/CategoryControlle
 import { OrderController } from './presentation/controllers/OrderController';
 import { InventoryController } from './presentation/controllers/InventoryController';
 import { WalletController } from './presentation/controllers/WalletController';
+import { CartController } from './presentation/controllers/CartController';
 
 // Import use cases
 import { AuthUseCase } from './domain/useCases/AuthUseCase';
@@ -34,6 +36,7 @@ import { productRepository } from './infrastructure/repositories/ProductReposito
 import { categoryRepository } from './infrastructure/repositories/CategoryRepositoryImpl';
 import { orderRepository } from './infrastructure/repositories/OrderRepositoryImpl';
 import { walletRepository } from './infrastructure/repositories/WalletRepositoryImpl';
+import { cartRepository } from './infrastructure/repositories/CartRepositoryImpl';
 
 dotenv.config();
 
@@ -64,6 +67,7 @@ export function createApp(): Application {
   const orderController = new OrderController(orderUseCase);
   const inventoryController = new InventoryController(inventoryUseCase);
   const walletController = new WalletController(walletUseCase);
+  const cartController = new CartController(cartRepository);
 
   // Health check
   app.get('/health', (req: Request, res: Response) => {
@@ -85,6 +89,7 @@ export function createApp(): Application {
   app.use('/api/orders', setupOrderRoutes(orderController, jwtSecret));
   app.use('/api/inventory', setupInventoryRoutes(inventoryController, jwtSecret));
   app.use('/api/wallet', setupWalletRoutes(walletController, jwtSecret));
+  app.use('/api/cart', setupCartRoutes(cartController, jwtSecret));
 
   // 404 handler (Jika route tidak ditemukan di atas)
   app.use((req: Request, res: Response) => {

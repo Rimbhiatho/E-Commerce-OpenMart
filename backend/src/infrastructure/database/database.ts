@@ -110,11 +110,30 @@ export const initializeDatabase = async (): Promise<void> => {
       );
     `);
 
+    // Cart items table for user shopping carts
+    await database.exec(`
+      CREATE TABLE IF NOT EXISTS cart_items (
+        id TEXT PRIMARY KEY,
+        userId TEXT NOT NULL,
+        productId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        imageUrl TEXT,
+        price REAL NOT NULL,
+        quantity INTEGER NOT NULL DEFAULT 1,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        FOREIGN KEY (userId) REFERENCES users(id),
+        FOREIGN KEY (productId) REFERENCES products(id),
+        UNIQUE(userId, productId)
+      );
+    `);
+
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_products_category ON products(categoryId)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(userId)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_categories_active ON categories(isActive)`);
     await database.exec(`CREATE INDEX IF NOT EXISTS idx_wallet_transactions_user ON wallet_transactions(userId)`);
+    await database.exec(`CREATE INDEX IF NOT EXISTS idx_cart_items_user ON cart_items(userId)`);
 
     console.log('✅ Database tables initialized successfully');
 

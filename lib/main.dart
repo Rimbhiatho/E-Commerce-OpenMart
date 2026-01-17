@@ -4,6 +4,8 @@ import 'login_page.dart';
 import 'dart:async';
 import 'package:openmart/data/server/service/auth_api_service.dart';
 import 'package:openmart/data/server/repository/auth_repository.dart';
+import 'package:openmart/data/server/service/cart_api_service.dart';
+import 'package:openmart/data/server/repository/cart_repository.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/presentation/controllers/cart_provider.dart';
 
@@ -36,8 +38,20 @@ class OpenMartApp extends StatelessWidget {
           create: (context) =>
               AuthProvider(authRepository: context.read<AuthRepository>()),
         ),
+        // Provide CartApiService
+        Provider<CartApiService>(create: (_) => CartApiService()),
+        // Provide CartRepository
+        Provider<CartRepository>(
+          create: (context) => CartRepositoryImpl(
+            cartApiService: context.read<CartApiService>(),
+          ),
+        ),
         // Provide CartProvider
-        ChangeNotifierProvider<CartProvider>(create: (_) => CartProvider()),
+        ChangeNotifierProvider<CartProvider>(
+          create: (context) => CartProvider(
+            cartApiService: context.read<CartApiService>(),
+          ),
+        ),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,

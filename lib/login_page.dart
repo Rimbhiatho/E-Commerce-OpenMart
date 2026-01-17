@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:openmart/Customer/homecus.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
+import 'package:openmart/presentation/controllers/cart_provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -31,6 +32,7 @@ class _LoginPageState extends State<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
 
     final authProvider = context.read<AuthProvider>();
+    final cartProvider = context.read<CartProvider>();
 
     bool success;
     if (_isLoginMode) {
@@ -48,6 +50,12 @@ class _LoginPageState extends State<LoginPage> {
 
     if (mounted) {
       if (success) {
+        // Load cart from server after successful login
+        final token = authProvider.token;
+        if (token != null) {
+          await cartProvider.loadCartFromServer(token);
+        }
+        
         // Navigate to home on successful login
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const CustomerHome()),
