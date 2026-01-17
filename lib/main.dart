@@ -6,8 +6,10 @@ import 'package:openmart/data/server/service/auth_api_service.dart';
 import 'package:openmart/data/server/repository/auth_repository.dart';
 import 'package:openmart/data/server/service/cart_api_service.dart';
 import 'package:openmart/data/server/repository/cart_repository.dart';
+import 'package:openmart/data/server/service/wallet_api_service.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/presentation/controllers/cart_provider.dart';
+import 'package:openmart/presentation/controllers/wallet_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -50,6 +52,14 @@ class OpenMartApp extends StatelessWidget {
         ChangeNotifierProvider<CartProvider>(
           create: (context) => CartProvider(
             cartApiService: context.read<CartApiService>(),
+          ),
+        ),
+        // Provide WalletApiService
+        Provider<WalletApiService>(create: (_) => WalletApiService()),
+        // Provide WalletProvider
+        ChangeNotifierProvider<WalletProvider>(
+          create: (context) => WalletProvider(
+            walletApiService: context.read<WalletApiService>(),
           ),
         ),
       ],

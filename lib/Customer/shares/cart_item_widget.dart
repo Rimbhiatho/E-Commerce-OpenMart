@@ -107,8 +107,9 @@ class CartItemWidget extends StatelessWidget {
 
 class CartPage extends StatelessWidget {
   final String? token;
+  final VoidCallback? onBuyPressed;
 
-  const CartPage({super.key, this.token});
+  const CartPage({super.key, this.token, this.onBuyPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -189,7 +190,7 @@ class CartPage extends StatelessWidget {
                           padding: const EdgeInsets.symmetric(vertical: 12.0),
                           backgroundColor: Colors.green,
                         ),
-                        onPressed: () async {
+                        onPressed: onBuyPressed ?? () async {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Pembelian berhasil!'),
