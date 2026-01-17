@@ -7,6 +7,7 @@ import 'package:openmart/data/server/usecase/get_product_usecase.dart';
 import 'package:openmart/data/local/db/database_helper.dart';
 import 'package:openmart/data/server/repository/product_repository.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
+import 'package:openmart/presentation/controllers/cart_provider.dart';
 import 'package:openmart/login_page.dart';
 import 'package:openmart/Customer/pages/keranjang.dart';
 import 'package:openmart/Customer/pages/history.dart';
@@ -130,11 +131,35 @@ class _CustomerHomeState extends State<CustomerHome> {
                   itemCount: filteredProducts.length,
                   itemBuilder: (context, index) {
                     final product = filteredProducts[index];
-                    return CartProduct(
-                      imageurl: product.image,
-                      productname: product.title,
-                      productprice: product.price,
-                      onpress: () {},
+                    return GestureDetector(
+                      onTap: () {
+                        // Add to cart when an item is tapped
+                        context.read<CartProvider>().addToCart(product);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '${product.title} ditambahkan ke keranjang',
+                            ),
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: CartProduct(
+                        imageurl: product.image,
+                        productname: product.title,
+                        productprice: product.price,
+                        onpress: () {
+                          context.read<CartProvider>().addToCart(product);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${product.title} ditambahkan ke keranjang',
+                              ),
+                              duration: const Duration(seconds: 1),
+                            ),
+                          );
+                        },
+                      ),
                     );
                   },
                 ),

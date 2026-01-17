@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:openmart/data/server/service/auth_api_service.dart';
 import 'package:openmart/data/server/repository/auth_repository.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
+import 'package:openmart/presentation/controllers/cart_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,6 +36,8 @@ class OpenMartApp extends StatelessWidget {
           create: (context) =>
               AuthProvider(authRepository: context.read<AuthRepository>()),
         ),
+        // Provide CartProvider
+        ChangeNotifierProvider<CartProvider>(create: (_) => CartProvider()),
       ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
