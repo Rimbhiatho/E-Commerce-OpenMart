@@ -8,6 +8,7 @@ import 'package:openmart/data/local/db/database_helper.dart';
 import 'package:openmart/data/server/repository/product_repository.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/presentation/controllers/cart_provider.dart';
+import 'package:openmart/presentation/controllers/product_provider.dart';
 import 'package:openmart/login_page.dart';
 import 'package:openmart/Customer/pages/keranjang.dart';
 import 'package:openmart/Customer/pages/transaksi.dart';
@@ -84,100 +85,135 @@ class _CustomerHomeState extends State<CustomerHome> {
   }
 
   Widget _homePage() {
-    return FutureBuilder<List<ProductModel>>(
-      future: futureProducts,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
+    // Load products when home page is first shown
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().loadProducts();
+    });
+
+    return Consumer<ProductProvider>(
+      builder: (context, productProvider, child) {
+        if (productProvider.isLoading && productProvider.products.isEmpty) {
           return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
+        }
+
+        if (productProvider.error != null && productProvider.products.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text('Error: ${snapshot.error}'),
+                Text('Error: ${productProvider.error}'),
                 const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
-                    setState(() {
-                      futureProducts = useCase.execute();
-                    });
+                    productProvider.loadProducts();
                   },
                   child: const Text('Retry'),
                 ),
               ],
             ),
           );
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('No products available'));
-        } else {
-          final products = snapshot.data!;
-          _categories = products
-              .map((p) => p.category.trim())
-              .where((c) => c.isNotEmpty)
-              .toSet()
-              .toList();
-          _categories.sort();
-
-          final filteredProducts = products.where((product) {
-            final titleMatch = product.title.toLowerCase().contains(
-              _searchQuery,
-            );
-            final prodCategory = product.category.trim();
-            final categoryMatch =
-                _selectedCategory == 'All' || prodCategory == _selectedCategory;
-            return titleMatch && categoryMatch;
-          }).toList();
-          return Column(
-            children: [
-              searchBar(),
-              categorySelector(),
-              Expanded(
-                child: GridView.builder(
-                  padding: const EdgeInsets.all(8.0),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.7,
-                    crossAxisSpacing: 8.0,
-                    mainAxisSpacing: 8.0,
-                  ),
-                  itemCount: filteredProducts.length,
-                  itemBuilder: (context, index) {
-                    final product = filteredProducts[index];
-                    return GestureDetector(
-                      onTap: () {
-                        context.read<CartProvider>().addToCart(product);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '${product.title} ditambahkan ke keranjang',
-                            ),
-                            duration: const Duration(seconds: 1),
-                          ),
-                        );
-                      },
-                      child: CartProduct(
-                        imageurl: product.image,
-                        productname: product.title,
-                        productprice: product.price,
-                        onpress: () {
-                          context.read<CartProvider>().addToCart(product);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '${product.title} ditambahkan ke keranjang',
-                              ),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          );
         }
+
+        if (productProvider.products.isEmpty) {
+          return const Center(child: Text('No products available'));
+        }
+
+        final products = productProvider.products;
+        _categories = products
+            .map((p) => p.category.trim())
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .toList();
+        _categories.sort();
+
+        final filteredProducts = products.where((product) {
+          final titleMatch = product.title.toLowerCase().contains(
+            _searchQuery,
+          );
+          final prodCategory = product.category.trim();
+          final categoryMatch =
+              _selectedCategory == 'All' || prodCategory == _selectedCategory;
+          return titleMatch && categoryMatch;
+        }).toList();
+
+        return Column(
+          children: [
+            searchBar(),
+            categorySelector(),
+            Expanded(
+              child: Stack(
+                children: [
+                  GridView.builder(
+                    padding: const EdgeInsets.all(8.0),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.7,
+                      crossAxisSpacing: 8.0,
+                      mainAxisSpacing: 8.0,
+                    ),
+                    itemCount: filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = filteredProducts[index];
+                      final isOutOfStock = product.stock <= 0;
+                      
+                      return GestureDetector(
+                        onTap: isOutOfStock
+                            ? null
+                            : () {
+                                context.read<CartProvider>().addToCart(product);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '${product.title} ditambahkan ke keranjang',
+                                    ),
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              },
+                        child: CartProduct(
+                          imageurl: product.image,
+                          productname: product.title,
+                          productprice: product.price,
+                          stock: product.stock,
+                          onpress: isOutOfStock
+                              ? () {}
+                              : () {
+                                  context.read<CartProvider>().addToCart(product);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${product.title} ditambahkan ke keranjang',
+                                      ),
+                                      duration: const Duration(seconds: 1),
+                                    ),
+                                  );
+                                },
+                        ),
+                      );
+                    },
+                  ),
+                  if (productProvider.isLoading && productProvider.products.isNotEmpty)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.8),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        );
       },
     );
   }

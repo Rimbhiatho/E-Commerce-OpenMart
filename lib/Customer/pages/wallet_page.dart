@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:openmart/presentation/controllers/wallet_provider.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/presentation/controllers/cart_provider.dart';
+import 'package:openmart/presentation/controllers/product_provider.dart';
 
 /// WalletCheckoutPage - Halaman pembayaran dengan wallet
 /// Muncul setelah user klik tombol "Beli" di keranjang
@@ -76,6 +77,40 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
       return;
     }
 
+    // Validasi stok barang
+    final outOfStockItems = <String>[];
+    final insufficientStockItems = <String>[];
+    
+    for (var item in cartProvider.items) {
+      if (item.product.stock <= 0) {
+        outOfStockItems.add(item.product.title);
+      } else if (item.quantity > item.product.stock) {
+        insufficientStockItems.add(
+          '${item.product.title} (maks: ${item.product.stock})',
+        );
+      }
+    }
+
+    if (outOfStockItems.isNotEmpty) {
+      setState(() {
+        _errorMessage =
+            'Beberapa produk sudah tidak tersedia:\n'
+            '- ${outOfStockItems.join('\n- ')}\n\n'
+            'Silakan hapus produk tersebut dari keranjang.';
+      });
+      return;
+    }
+
+    if (insufficientStockItems.isNotEmpty) {
+      setState(() {
+        _errorMessage =
+            'Stok beberapa produk tidak mencukupi:\n'
+            '- ${insufficientStockItems.join('\n- ')}\n\n'
+            'Silakan kurangi jumlah produk tersebut.';
+      });
+      return;
+    }
+
     // Validasi saldo
     if (!walletProvider.hasSufficientBalance(widget.totalAmount)) {
       setState(() {
@@ -109,6 +144,11 @@ class _WalletCheckoutPageState extends State<WalletCheckoutPage> {
         await cartProvider.clearCart(token: token);
         await walletProvider.refreshBalance(token);
         await walletProvider.loadTransactions(token);
+        
+        // Refresh product list to show updated stock
+        if (mounted) {
+          context.read<ProductProvider>().loadProducts();
+        }
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -4,6 +4,7 @@ import 'package:openmart/Customer/shares/cart_item_widget.dart';
 import 'package:openmart/presentation/controllers/cart_provider.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/presentation/controllers/wallet_provider.dart';
+import 'package:openmart/presentation/controllers/product_provider.dart';
 import 'wallet_page.dart';
 
 class KeranjangPage extends StatefulWidget {
@@ -56,9 +57,11 @@ class _KeranjangPageState extends State<KeranjangPage> {
             ),
           ),
         ).then((success) async {
-          // Refresh wallet balance after returning
+          // Refresh wallet balance and products after returning from successful purchase
           if (success == true && token != null) {
             await walletProvider.refreshBalance(token);
+            // Also refresh products to update stock
+            context.read<ProductProvider>().loadProducts();
           }
         });
       },

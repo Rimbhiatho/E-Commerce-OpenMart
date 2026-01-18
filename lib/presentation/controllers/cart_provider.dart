@@ -39,17 +39,36 @@ class CartProvider extends ChangeNotifier {
     : cartApiService = cartApiService ?? CartApiService.instance;
 
   /// Add product to cart (local + sync to server)
+  /// Validates stock availability before adding
   Future<void> addToCart(ProductModel product, {String? token}) async {
+    // Check if product is out of stock
+    if (product.stock <= 0) {
+      _error = 'Produk ${product.title} sedang tidak tersedia';
+      notifyListeners();
+      throw Exception('Produk tidak tersedia');
+    }
+
     // Check if item already exists
     final existingIndex = _items.indexWhere(
       (item) => item.product.id == product.id,
     );
 
     if (existingIndex >= 0) {
-      // Item exists, increment quantity
+      // Item exists, check if we can add more
+      final currentQty = _items[existingIndex].quantity;
+      if (currentQty >= product.stock) {
+        _error = 'Stok ${product.title} tidak mencukupi (maks: ${product.stock})';
+        notifyListeners();
+        throw Exception('Stok tidak mencukupi');
+      }
       _items[existingIndex].quantity++;
     } else {
       // Add new item
+      if (product.stock < 1) {
+        _error = 'Stok ${product.title} tidak tersedia';
+        notifyListeners();
+        throw Exception('Stok tidak tersedia');
+      }
       _items.add(CartItem(product: product, quantity: 1));
     }
     notifyListeners();
