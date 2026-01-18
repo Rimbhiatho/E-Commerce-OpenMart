@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:openmart/Admin/homeadm.dart';
 import 'package:openmart/Customer/homecus.dart';
 import 'package:openmart/presentation/controllers/auth_provider.dart';
 import 'package:openmart/presentation/controllers/cart_provider.dart';
@@ -78,10 +79,17 @@ class _LoginPageState extends State<LoginPage> {
           );
         }
 
-        // Navigate to home on successful login
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const CustomerHome()),
-        );
+        // Navigate to home based on role
+        final user = authProvider.user;
+        if (user != null && user.role == 'admin') {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const AdminHome()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (context) => const CustomerHome()),
+          );
+        }
       } else {
         // Show error snackbar
         ScaffoldMessenger.of(context).showSnackBar(
