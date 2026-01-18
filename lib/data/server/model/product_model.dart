@@ -5,6 +5,7 @@ class ProductModel {
   final double price;
   final String category;
   final String image;
+  final int stock;
 
   ProductModel({
     required this.id,
@@ -13,18 +14,40 @@ class ProductModel {
     required this.price,
     required this.category,
     required this.image,
+    this.stock = 0,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
+    // Safe parsing for id
+    final id = json['id'] != null
+        ? (json['id'] is String ? int.parse(json['id']) : json['id'] as int)
+        : 0;
+
+    // Safe parsing for stock
+    final stock = json['stock'] != null
+        ? (json['stock'] is String
+              ? int.parse(json['stock'].toString())
+              : json['stock'] as int)
+        : 0;
+
+    // Safe parsing for price
+    final price = json['price'] != null
+        ? (json['price'] is String
+              ? double.parse(json['price'])
+              : (json['price'] as num).toDouble())
+        : 0.0;
+
+    // Get image URL - try imageUrl first, then image
+    final imageUrl = json['imageUrl'] ?? json['image'] ?? '';
+
     return ProductModel(
-      id: json['id'],
-      title: json['title'],
-      description: json['description'],
-      price: (json['price'] as num).toDouble(),
-      category: json['category'],
-      image: json['id'] == 1
-          ? 'https://content.wolfswinkel.nl/1556616841/dossier-art/FJALLRAVEN_24225/F24225-030_%20FJALLRAVEN%20FOLDSACK%20No.3%20DARK%20GREY.jpg?size=product-detail&format=jpg'
-          : json['image'],
+      id: id,
+      title: json['name'] ?? json['title'] ?? 'Unknown',
+      description: json['description'] ?? 'No description',
+      price: price,
+      category: json['category'] ?? json['categoryId'] ?? 'Uncategorized',
+      image: imageUrl,
+      stock: stock,
     );
   }
 
@@ -36,6 +59,7 @@ class ProductModel {
       'price': price,
       'category': category,
       'image': image,
+      'stock': stock,
     };
   }
 }

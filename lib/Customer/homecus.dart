@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:openmart/Customer/shares/cartproduct.dart';
 import 'package:openmart/data/server/model/product_model.dart';
-import 'package:openmart/data/server/service/product_api_service.dart';
+import 'package:openmart/data/server/service/backend_product_api_service.dart';
 import 'package:openmart/data/server/usecase/get_product_usecase.dart';
 import 'package:openmart/data/local/db/database_helper.dart';
 import 'package:openmart/data/server/repository/product_repository.dart';
@@ -33,7 +33,7 @@ class _CustomerHomeState extends State<CustomerHome> {
   @override
   void initState() {
     super.initState();
-    final apiService = ProductApiService();
+    final apiService = BackendProductApiService();
     final dbHelper = DatabaseHelper.instance;
     final repository = ProductRepository(apiService, dbHelper);
     useCase = GetProductsUseCase(repository);

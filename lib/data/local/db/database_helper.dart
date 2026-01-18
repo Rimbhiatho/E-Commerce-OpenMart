@@ -18,7 +18,7 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE products (
@@ -27,7 +27,8 @@ class DatabaseHelper {
             description TEXT,
             price REAL,
             category TEXT,
-            image TEXT
+            image TEXT,
+            stock INTEGER DEFAULT 0
           )
         ''');
       },
@@ -35,9 +36,16 @@ class DatabaseHelper {
     );
   }
 
-  void _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      await db.execute('ALTER TABLE products ADD COLUMN title TEXT');
+      // Add stock column if it doesn't exist
+      try {
+        await db.execute(
+          'ALTER TABLE products ADD COLUMN stock INTEGER DEFAULT 0',
+        );
+      } catch (e) {
+        // Column might already exist
+      }
     }
   }
 }
