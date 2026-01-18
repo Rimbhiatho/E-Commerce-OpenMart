@@ -127,9 +127,7 @@ class _CustomerHomeState extends State<CustomerHome> {
         _categories.sort();
 
         final filteredProducts = products.where((product) {
-          final titleMatch = product.title.toLowerCase().contains(
-            _searchQuery,
-          );
+          final titleMatch = product.title.toLowerCase().contains(_searchQuery);
           final prodCategory = product.category.trim();
           final categoryMatch =
               _selectedCategory == 'All' || prodCategory == _selectedCategory;
@@ -145,17 +143,18 @@ class _CustomerHomeState extends State<CustomerHome> {
                 children: [
                   GridView.builder(
                     padding: const EdgeInsets.all(8.0),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.7,
-                      crossAxisSpacing: 8.0,
-                      mainAxisSpacing: 8.0,
-                    ),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.7,
+                          crossAxisSpacing: 8.0,
+                          mainAxisSpacing: 8.0,
+                        ),
                     itemCount: filteredProducts.length,
                     itemBuilder: (context, index) {
                       final product = filteredProducts[index];
                       final isOutOfStock = product.stock <= 0;
-                      
+
                       return GestureDetector(
                         onTap: isOutOfStock
                             ? null
@@ -178,7 +177,9 @@ class _CustomerHomeState extends State<CustomerHome> {
                           onpress: isOutOfStock
                               ? () {}
                               : () {
-                                  context.read<CartProvider>().addToCart(product);
+                                  context.read<CartProvider>().addToCart(
+                                    product,
+                                  );
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
                                       content: Text(
@@ -192,14 +193,15 @@ class _CustomerHomeState extends State<CustomerHome> {
                       );
                     },
                   ),
-                  if (productProvider.isLoading && productProvider.products.isNotEmpty)
+                  if (productProvider.isLoading &&
+                      productProvider.products.isNotEmpty)
                     Positioned(
                       top: 8,
                       right: 8,
                       child: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.8),
+                          color: Colors.green.withValues(alpha: 0.8),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const SizedBox(
@@ -272,7 +274,13 @@ class _CustomerHomeState extends State<CustomerHome> {
 
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Colors.green,
         title: const Text('OpenMart'),
+        titleTextStyle: const TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+        ),
         actions: [
           if (authProvider.user != null)
             Padding(
@@ -283,6 +291,7 @@ class _CustomerHomeState extends State<CustomerHome> {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -290,6 +299,9 @@ class _CustomerHomeState extends State<CustomerHome> {
 
           IconButton(
             icon: const Icon(Icons.logout),
+            style: ButtonStyle(
+              foregroundColor: MaterialStateProperty.all<Color>(Colors.white),
+            ),
             onPressed: _handleLogout,
             tooltip: 'Logout',
           ),
@@ -297,6 +309,7 @@ class _CustomerHomeState extends State<CustomerHome> {
       ),
       body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: NavigationBar(
+        backgroundColor: Colors.green[50],
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) =>
             setState(() => _selectedIndex = index),

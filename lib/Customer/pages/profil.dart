@@ -184,7 +184,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   Center(
                     child: Text(
                       user?.email ?? '',
-                      style: const TextStyle(color: Colors.black54),
+                      style: const TextStyle(
+                        color: Color.fromARGB(137, 0, 0, 0),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -199,9 +201,12 @@ class _ProfilePageState extends State<ProfilePage> {
                         elevation: 0,
                         backgroundColor: _isLoadingImage
                             ? Colors.grey
-                            : const Color.fromARGB(255, 123, 118, 118),
-                        label: const Text("Kamera"),
-                        icon: const Icon(Icons.camera_alt),
+                            : Colors.green,
+                        label: const Text(
+                          "Kamera",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        icon: const Icon(Icons.camera_alt, color: Colors.white),
                       ),
                       const SizedBox(width: 16),
                       FloatingActionButton.extended(
@@ -212,9 +217,16 @@ class _ProfilePageState extends State<ProfilePage> {
                         elevation: 0,
                         backgroundColor: _isLoadingImage
                             ? Colors.grey
-                            : const Color.fromARGB(255, 123, 118, 118),
-                        label: const Text("Galeri"),
-                        icon: const Icon(Icons.image),
+                            : Colors.green,
+                        label: const Text(
+                          "Galeri",
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        extendedTextStyle: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                        icon: const Icon(Icons.image, color: Colors.white),
                       ),
                     ],
                   ),
@@ -254,9 +266,12 @@ class _TopPortion extends StatelessWidget {
           ),
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.topRight,
-              colors: [Color(0xff0043ba), Color(0xff006df1)],
+              begin: Alignment.topRight,
+              end: Alignment.topLeft,
+              colors: [
+                Color.fromRGBO(255, 255, 255, 0.004),
+                Color.fromARGB(255, 100, 191, 50),
+              ],
             ),
             borderRadius: BorderRadius.only(
               bottomLeft: Radius.circular(50),
@@ -302,7 +317,7 @@ class _TopPortion extends StatelessWidget {
                       child: Container(
                         margin: const EdgeInsets.all(8.0),
                         decoration: const BoxDecoration(
-                          color: Color.fromARGB(255, 110, 32, 205),
+                          color: Colors.green,
                           shape: BoxShape.circle,
                         ),
                       ),
