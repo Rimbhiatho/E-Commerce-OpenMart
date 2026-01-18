@@ -357,43 +357,6 @@ class _StokBarangPageState extends State<StokBarangPage> {
     return const Icon(Icons.check_circle, color: Colors.green);
   }
 
-  Future<void> _setAllStockTo100() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
-
-    try {
-      // Update all products in local database to have stock of 100
-      final db = await DatabaseHelper.instance.database;
-      await db.update(
-        'products',
-        {'stock': 100},
-        where: '1 = 1', // Update all rows
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Semua stok berhasil diatur menjadi 100'),
-          backgroundColor: Colors.green,
-        ),
-      );
-
-      _loadProducts();
-    } catch (e) {
-      setState(() {
-        _errorMessage = 'Gagal mengatur stok: $e';
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_errorMessage!), backgroundColor: Colors.red),
-      );
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -401,18 +364,6 @@ class _StokBarangPageState extends State<StokBarangPage> {
         title: const Text('Kelola Stok Barang'),
         backgroundColor: Colors.blue.shade700,
         foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadProducts,
-            tooltip: 'Refresh',
-          ),
-          IconButton(
-            icon: const Icon(Icons.inventory),
-            onPressed: _setAllStockTo100,
-            tooltip: 'Atur Semua Stok ke 100',
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -646,64 +597,21 @@ class _StokBarangPageState extends State<StokBarangPage> {
                               ],
                             ),
                             const Divider(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () => _tambahStok(product),
-                                    icon: const Icon(
-                                      Icons.add,
-                                      color: Colors.green,
-                                    ),
-                                    label: const Text(
-                                      'Tambah',
-                                      style: TextStyle(color: Colors.green),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                  ),
+                            Center(
+                              child: ElevatedButton.icon(
+                                onPressed: () => _aturStok(product),
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.white,
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: OutlinedButton.icon(
-                                    onPressed: () => _kurangiStok(product),
-                                    icon: const Icon(
-                                      Icons.remove,
-                                      color: Colors.orange,
-                                    ),
-                                    label: const Text(
-                                      'Kurangi',
-                                      style: TextStyle(color: Colors.orange),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(
-                                        color: Colors.orange,
-                                      ),
-                                    ),
-                                  ),
+                                label: const Text(
+                                  'Atur Stok',
+                                  style: TextStyle(color: Colors.white),
                                 ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => _aturStok(product),
-                                    icon: const Icon(
-                                      Icons.edit,
-                                      color: Colors.white,
-                                    ),
-                                    label: const Text(
-                                      'Atur',
-                                      style: TextStyle(color: Colors.white),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.blue,
-                                    ),
-                                  ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
                                 ),
-                              ],
+                              ),
                             ),
                           ],
                         ),

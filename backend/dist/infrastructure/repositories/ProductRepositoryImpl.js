@@ -115,7 +115,7 @@ export class ProductRepositoryImpl {
     async updateStock(id, quantity) {
         const db = await getDatabase();
         const now = new Date().toISOString();
-        await db.run('UPDATE products SET stock = ?, updatedAt = ? WHERE id = ?', [quantity, now, id]);
+        await db.run('UPDATE products SET stock = stock + ?, updatedAt = ? WHERE id = ?', [quantity, now, id]);
         return (await this.findById(id));
     }
     toResponse(product) {

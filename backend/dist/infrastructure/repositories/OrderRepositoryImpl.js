@@ -59,16 +59,21 @@ export class OrderRepositoryImpl {
         const db = await getDatabase();
         const id = uuidv4();
         const now = new Date().toISOString();
-        const items = JSON.stringify(dto.items);
-        // Convert DTO items to OrderItem format
-        const orderItems = dto.items.map((item, index) => ({
-            id: `item-${index}`,
-            productId: item.productId,
-            productName: '',
-            quantity: item.quantity,
-            unitPrice: 0,
-            totalPrice: 0
-        }));
+        // Build order items using fields provided in DTO when available
+        const orderItems = dto.items.map((item, index) => {
+            const quantity = item.quantity ?? 1;
+            const unitPrice = (item.unitPrice ?? item.price ?? 0);
+            const productName = (item.productName ?? item.name ?? '');
+            return {
+                id: item.id ?? `item-${index}`,
+                productId: item.productId,
+                productName,
+                quantity,
+                unitPrice,
+                totalPrice: (item.totalPrice ?? (unitPrice * quantity))
+            };
+        });
+        const items = JSON.stringify(orderItems);
         await db.run(`INSERT INTO orders (id, userId, items, totalAmount, status, shippingAddress, paymentMethod, paymentStatus, notes, createdAt, updatedAt)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [
             id,
@@ -133,14 +138,19 @@ export class OrderRepositoryImpl {
         let items = [];
         try {
             const parsedItems = JSON.parse(row.items);
-            items = parsedItems.map((item, index) => ({
-                id: `item-${index}`,
-                productId: item.productId,
-                productName: '',
-                quantity: item.quantity,
-                unitPrice: 0,
-                totalPrice: 0
-            }));
+            items = parsedItems.map((item, index) => {
+                const quantity = item.quantity ?? 1;
+                const unitPrice = (item.unitPrice ?? item.price ?? 0);
+                const productName = (item.productName ?? item.name ?? '');
+                return {
+                    id: item.id ?? `item-${index}`,
+                    productId: item.productId,
+                    productName,
+                    quantity,
+                    unitPrice,
+                    totalPrice: (item.totalPrice ?? (unitPrice * quantity))
+                };
+            });
         }
         catch (e) {
             items = [];

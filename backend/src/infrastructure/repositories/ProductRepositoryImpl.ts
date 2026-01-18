@@ -148,7 +148,7 @@ export class ProductRepositoryImpl implements ProductRepository {
     const now = new Date().toISOString();
     
     await db.run(
-      'UPDATE products SET stock = ?, updatedAt = ? WHERE id = ?',
+      'UPDATE products SET stock = stock + ?, updatedAt = ? WHERE id = ?',
       [quantity, now, id]
     );
 
