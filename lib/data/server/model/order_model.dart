@@ -5,24 +5,28 @@ class OrderModel {
   final String userId;
   final String userName;
   final List<OrderItem> items;
-  final double totalPrice;
+  final double totalAmount;
   final String status;
   final String paymentStatus;
   final String createdAt;
   final String updatedAt;
   final String? notes;
+  final String? shippingAddress;
+  final String? paymentMethod;
 
   OrderModel({
     required this.id,
     required this.userId,
     required this.userName,
     required this.items,
-    required this.totalPrice,
+    required this.totalAmount,
     required this.status,
     required this.paymentStatus,
     required this.createdAt,
     required this.updatedAt,
     this.notes,
+    this.shippingAddress,
+    this.paymentMethod,
   });
 
   factory OrderModel.fromJson(Map<String, dynamic> json) {
@@ -34,12 +38,19 @@ class OrderModel {
       items: itemsList
           .map((item) => OrderItem.fromJson(item))
           .toList(),
-      totalPrice: (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
+      // Support both totalAmount (backend) and totalPrice (fallback)
+      totalAmount: (json['totalAmount'] as num?)?.toDouble() ?? (json['totalPrice'] as num?)?.toDouble() ?? 0.0,
       status: json['status'] ?? 'pending',
       paymentStatus: json['paymentStatus'] ?? 'unpaid',
-      createdAt: json['createdAt'] ?? '',
-      updatedAt: json['updatedAt'] ?? '',
+      createdAt: json['createdAt'] != null 
+          ? DateTime.parse(json['createdAt']).toIso8601String() 
+          : '',
+      updatedAt: json['updatedAt'] != null 
+          ? DateTime.parse(json['updatedAt']).toIso8601String() 
+          : '',
       notes: json['notes'],
+      shippingAddress: json['shippingAddress'],
+      paymentMethod: json['paymentMethod'],
     );
   }
 
@@ -49,12 +60,14 @@ class OrderModel {
       'userId': userId,
       'userName': userName,
       'items': items.map((e) => e.toMap()).toList(),
-      'totalPrice': totalPrice,
+      'totalAmount': totalAmount,
       'status': status,
       'paymentStatus': paymentStatus,
       'createdAt': createdAt,
       'updatedAt': updatedAt,
       'notes': notes,
+      'shippingAddress': shippingAddress,
+      'paymentMethod': paymentMethod,
     };
   }
 }
@@ -82,7 +95,8 @@ class OrderItem {
       productId: json['productId'] ?? product?['id'] ?? '',
       productName: json['productName'] ?? json['name'] ?? json['title'] ?? product?['name'] ?? product?['title'] ?? 'Unknown Product',
       imageUrl: json['imageUrl'] ?? json['image'] ?? product?['imageUrl'] ?? product?['image'] ?? '',
-      price: (json['price'] as num?)?.toDouble() ?? (json['unitPrice'] as num?)?.toDouble() ?? product?['price']?.toDouble() ?? 0.0,
+      // Support both unitPrice (backend) and price (fallback)
+      price: (json['unitPrice'] as num?)?.toDouble() ?? (json['price'] as num?)?.toDouble() ?? (json['totalPrice'] as num?)?.toDouble() ?? product?['price']?.toDouble() ?? 0.0,
       quantity: (json['quantity'] as num?)?.toInt() ?? json['qty'] as int? ?? 1,
     );
   }

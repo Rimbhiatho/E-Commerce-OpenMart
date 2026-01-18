@@ -43,11 +43,11 @@ class _LaporanPenjualanPageState extends State<LaporanPenjualanPage> {
     try {
       final orders = await OrderApiService.instance.getAllOrders(token);
       
-      // Calculate total income from completed and paid orders
+      // Calculate total income from all paid orders (payment is made when order is created)
       double total = 0.0;
       for (final order in orders) {
-        if (order.status == 'completed' && order.paymentStatus == 'paid') {
-          total += order.totalPrice;
+        if (order.paymentStatus == 'paid') {
+          total += order.totalAmount;
         }
       }
 
@@ -118,12 +118,6 @@ class _LaporanPenjualanPageState extends State<LaporanPenjualanPage> {
       appBar: AppBar(
         title: const Text('Laporan Penjualan'),
         backgroundColor: Colors.green,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchOrders,
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -273,18 +267,14 @@ class _LaporanPenjualanPageState extends State<LaporanPenjualanPage> {
     }
 
     // Scrollable list of transactions
-    return RefreshIndicator(
-      onRefresh: _fetchOrders,
-      color: Colors.green,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        itemCount: _orders.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          final order = _orders[index];
-          return _buildOrderCard(order);
-        },
-      ),
+    return ListView.separated(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      itemCount: _orders.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final order = _orders[index];
+        return _buildOrderCard(order);
+      },
     );
   }
 
@@ -409,7 +399,7 @@ class _LaporanPenjualanPageState extends State<LaporanPenjualanPage> {
                   style: TextStyle(fontSize: 14),
                 ),
                 Text(
-                  _formatCurrency(order.totalPrice),
+                  _formatCurrency(order.totalAmount),
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
